@@ -1,0 +1,330 @@
+openapi: 3.1.0
+info:
+  title: Kursiva Render API
+  version: '1.0'
+  description: >-
+    Deterministic, no-AI template + render service. The calling agent is the
+    intelligence; this API discovers templates, describes their input contract,
+    and renders a print-grade PDF. v1 is synchronous REST. Schemas are kept
+    within the JSON Schema draft-07 ∩ 2020-12 common subset so the same
+    components validate at the Fastify runtime and in the contract tests.
+servers:
+  - url: /v1
+security:
+  - ApiKeyAuth: []
+paths:
+  /v1/doctypes:
+    get:
+      operationId: listDocTypes
+      summary: List document types with template counts.
+      responses:
+        '200':
+          description: Document types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DocType' }
+        '401':
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates:
+    get:
+      operationId: searchTemplates
+      summary: Search templates by query, doc type, and locale.
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string } }
+        - { name: doc_type, in: query, required: false, schema: { type: string } }
+        - { name: locale, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: Matching template cards.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TemplateCard' }
+        '400':
+          description: Unsupported locale.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates/{id}:
+    get:
+      operationId: describeTemplate
+      summary: Describe a template's input contract (the keystone).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The template contract.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateContract' }
+        '401':
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Unknown template id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/render:
+    post:
+      operationId: renderDocument
+      summary: >-
+        Render a template with caller content to a PDF. Content fields a given
+        template does not declare are ignored. Rejects documents over the page cap.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RenderRequest' }
+      responses:
+        '200':
+          description: Rendered document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenderResponse' }
+        '400':
+          description: Invalid request, unknown/invalid theme token, or page cap exceeded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Unknown template id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: Request body or embedded-image count over the input cap.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Per-key rate limit or monthly quota exhausted (carries an upgrade hint).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        default:
+          description: Renderer or ledger failure (fail-closed; never an unmetered document).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/signup:
+    post:
+      operationId: signup
+      summary: Request a free-tier key — emails a one-time verification code.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignupRequest' }
+      responses:
+        '202':
+          description: If eligible, a verification code has been emailed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignupAccepted' }
+        '400':
+          description: Invalid or disposable email address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/signup/verify:
+    post:
+      operationId: verifySignup
+      summary: Verify the emailed code and receive the Free-tier key (shown once).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerifyRequest' }
+      responses:
+        '200':
+          description: The issued Free-tier key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignupKeyResponse' }
+        '400':
+          description: Invalid or expired verification code.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: krsv
+      description: "A `krsv_`-prefixed API key sent as `Authorization: Bearer krsv_…`."
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            hint: { type: string }
+        pages_produced: { type: integer }
+        cap: { type: integer }
+        retry_after: { type: integer }
+        quota: { type: integer }
+        used: { type: integer }
+        period: { type: string }
+        limit: { type: integer }
+        limit_bytes: { type: integer }
+    DocType:
+      type: object
+      additionalProperties: false
+      required: [type, label, count]
+      properties:
+        type: { type: string }
+        label: { type: string }
+        count: { type: integer }
+    TemplateCard:
+      type: object
+      additionalProperties: false
+      required: [id, name, doc_type, summary]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        doc_type: { type: string }
+        summary: { type: string }
+    PageFormat:
+      type: object
+      additionalProperties: false
+      required: [width, height, unit]
+      properties:
+        width: { type: number }
+        height: { type: number }
+        unit: { type: string }
+    ContentField:
+      type: object
+      additionalProperties: false
+      required: [key, label, type, required]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        type:
+          type: string
+          enum: [text, textarea, date, serial, block, qrcode, barcode, image]
+        required: { type: boolean }
+        default:
+          description: Literal string default, or a per-language map.
+          type: [string, object]
+    ThemeToken:
+      type: object
+      additionalProperties: false
+      required: [name, default, type]
+      properties:
+        name: { type: string }
+        default: { type: string }
+        type:
+          type: string
+          enum: [color, length, font, string]
+    SamplePayload:
+      type: object
+      additionalProperties: false
+      required: [markdown, fields]
+      properties:
+        markdown: { type: string }
+        fields: { type: object, additionalProperties: true }
+    TemplateContract:
+      type: object
+      additionalProperties: false
+      required:
+        [id, doc_type, name, content_fields, theme_tokens, locales, page_format, sample_payload]
+      properties:
+        id: { type: string }
+        doc_type: { type: string }
+        name: { type: string }
+        content_fields:
+          type: array
+          items: { $ref: '#/components/schemas/ContentField' }
+        theme_tokens:
+          type: array
+          items: { $ref: '#/components/schemas/ThemeToken' }
+        locales:
+          type: array
+          items: { type: string }
+        page_format: { $ref: '#/components/schemas/PageFormat' }
+        sample_payload: { $ref: '#/components/schemas/SamplePayload' }
+    RenderRequest:
+      type: object
+      additionalProperties: false
+      required: [template_id]
+      properties:
+        template_id: { type: string }
+        content:
+          type: object
+          additionalProperties: false
+          properties:
+            markdown: { type: string }
+            fields: { type: object, additionalProperties: true }
+        theme:
+          type: object
+          additionalProperties: { type: string }
+        locale: { type: string }
+        options:
+          type: object
+          additionalProperties: true
+    RenderResponse:
+      type: object
+      additionalProperties: false
+      required: [document_url, pages, render_ms, renderer_version]
+      properties:
+        document_url: { type: string }
+        pages: { type: integer }
+        render_ms: { type: integer }
+        renderer_version: { type: string }
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string }
+    SignupAccepted:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string }
+    VerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [email, code]
+      properties:
+        email: { type: string }
+        code: { type: string }
+    SignupKeyResponse:
+      type: object
+      additionalProperties: false
+      required: [api_key, key_id, tier, monthly_quota]
+      properties:
+        api_key: { type: string }
+        key_id: { type: string }
+        tier: { type: string }
+        monthly_quota: { type: integer }

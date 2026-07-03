@@ -1,0 +1,97 @@
+/**
+ * TypeScript mirror of the Kursiva Render API contract (`contract/openapi.yaml`).
+ * These are the response and request shapes the CLI reads and writes; the
+ * vendored OpenAPI spec is the source of truth (see `test/contract.test.ts`).
+ */
+
+export interface DocType {
+  type: string
+  label: string
+  count: number
+}
+
+export interface TemplateCard {
+  id: string
+  name: string
+  doc_type: string
+  summary: string
+}
+
+export type ContentFieldType =
+  'text' | 'textarea' | 'date' | 'serial' | 'block' | 'qrcode' | 'barcode' | 'image'
+
+export interface ContentField {
+  key: string
+  label: string
+  type: ContentFieldType
+  required: boolean
+  /** Literal string default, or a per-language map. */
+  default?: string | Record<string, string>
+}
+
+export type ThemeTokenType = 'color' | 'length' | 'font' | 'string'
+
+export interface ThemeToken {
+  name: string
+  default: string
+  type: ThemeTokenType
+}
+
+export interface PageFormat {
+  width: number
+  height: number
+  unit: string
+}
+
+export interface SamplePayload {
+  markdown: string
+  fields: Record<string, unknown>
+}
+
+export interface TemplateContract {
+  id: string
+  doc_type: string
+  name: string
+  content_fields: ContentField[]
+  theme_tokens: ThemeToken[]
+  locales: string[]
+  page_format: PageFormat
+  sample_payload: SamplePayload
+}
+
+export interface RenderContent {
+  markdown?: string
+  fields?: Record<string, unknown>
+}
+
+export interface RenderRequest {
+  template_id: string
+  content?: RenderContent
+  theme?: Record<string, string>
+  locale?: string
+  options?: Record<string, unknown>
+}
+
+export interface RenderResponse {
+  document_url: string
+  pages: number
+  render_ms: number
+  renderer_version: string
+}
+
+/** The structured error envelope every non-2xx response carries. */
+export interface ApiErrorBody {
+  error: {
+    code: string
+    message: string
+    hint?: string
+  }
+  pages_produced?: number
+  cap?: number
+  retry_after?: number
+  quota?: number
+  used?: number
+  period?: string
+  limit?: number
+  limit_bytes?: number
+}

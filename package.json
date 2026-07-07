@@ -17,6 +17,14 @@
     "node": ">=20"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kursiva-cli/kursiva.git"
+  },
+  "homepage": "https://github.com/kursiva-cli/kursiva#readme",
+  "bugs": {
+    "url": "https://github.com/kursiva-cli/kursiva/issues"
+  },
   "keywords": [
     "pdf",
     "markdown",

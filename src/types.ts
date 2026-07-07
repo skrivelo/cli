@@ -72,11 +72,19 @@ export interface RenderRequest {
   options?: Record<string, unknown>
 }
 
+/** A non-fatal render warning; only `mermaid_render_failed` is emitted today. */
+export interface RenderWarning {
+  code: 'mermaid_render_failed'
+  count: number
+}
+
 export interface RenderResponse {
   document_url: string
   pages: number
   render_ms: number
   renderer_version: string
+  /** Present only when non-empty (omitted for a clean render). */
+  warnings?: RenderWarning[]
 }
 
 /** The structured error envelope every non-2xx response carries. */

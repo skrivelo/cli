@@ -5,7 +5,7 @@
  * slow tail; on timeout/network failure it raises a `CliError`.
  */
 
-import { ApiError, CliError } from './errors.js'
+import { ApiError, CliError, EXIT } from './errors.js'
 import type {
   ApiErrorBody,
   DocType,
@@ -34,6 +34,14 @@ export class ApiClient {
     this.opts = opts
   }
 
+  get baseUrl(): string {
+    return this.opts.baseUrl
+  }
+
+  get timeoutMs(): number {
+    return this.opts.timeoutMs
+  }
+
   doctypes(): Promise<DocType[]> {
     return this.request<DocType[]>('GET', '/doctypes')
   }
@@ -56,11 +64,12 @@ export class ApiClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    // The abort signal stays armed through the body read — a server that sends
+    // headers then stalls the body must still hit `--timeout`, not hang forever.
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs)
-    let res: Response
     try {
-      res = await fetch(`${this.opts.baseUrl}${path}`, {
+      const res = await fetch(`${this.opts.baseUrl}${path}`, {
         method,
         headers: {
           authorization: `Bearer ${this.opts.apiKey}`,
@@ -70,7 +79,21 @@ export class ApiClient {
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal
       })
+      const text = await res.text()
+      if (!res.ok) {
+        throw new ApiError(res.status, parseErrorBody(text, res.status))
+      }
+      if (!text) return undefined as T
+      try {
+        return JSON.parse(text) as T
+      } catch {
+        throw new CliError('The server returned a malformed response.', {
+          code: 'bad_response',
+          exitCode: EXIT.SERVER
+        })
+      }
     } catch (err) {
+      if (err instanceof ApiError || err instanceof CliError) throw err
       if ((err as Error).name === 'AbortError') {
         throw new CliError(
           `Request timed out after ${Math.round(this.opts.timeoutMs / 1000)}s. ` +
@@ -87,12 +110,6 @@ export class ApiClient {
     } finally {
       clearTimeout(timer)
     }
-
-    const text = await res.text()
-    if (!res.ok) {
-      throw new ApiError(res.status, parseErrorBody(text, res.status))
-    }
-    return (text ? JSON.parse(text) : undefined) as T
   }
 }
 

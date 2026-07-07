@@ -20,6 +20,8 @@ afterEach(() => {
 
 function fakeClient(capture: { body?: RenderRequest }, docUrl: string): ApiClient {
   return {
+    baseUrl: 'http://127.0.0.1:8787/v1',
+    timeoutMs: 30000,
     render: async (body: RenderRequest): Promise<RenderResponse> => {
       capture.body = body
       return { document_url: docUrl, pages: 2, render_ms: 5, renderer_version: 'test' }

@@ -38,7 +38,10 @@ export async function renderCommand(
 
   const res = await client.render(body)
   const outPath = resolve(parsed.options['--output'] ?? defaultOutName(file))
-  await downloadTo(res.document_url, outPath)
+  await downloadTo(res.document_url, outPath, {
+    baseUrl: client.baseUrl,
+    timeoutMs: client.timeoutMs
+  })
 
   if (json) {
     printJson({ ...res, output_path: outPath })

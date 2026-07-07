@@ -104,6 +104,42 @@ describe('ApiClient requests', () => {
     await expect(client().doctypes()).rejects.toBeInstanceOf(CliError)
   })
 
+  it('raises a bad_response CliError when a 2xx body is not JSON', async () => {
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => '<html>not json'
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      await client().doctypes()
+      throw new Error('expected a throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(CliError)
+      expect((err as CliError).code).toBe('bad_response')
+      expect((err as CliError).exitCode).toBe(7)
+    }
+  })
+
+  it('maps an abort during the body read to a timeout (the timer covers the body)', async () => {
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' })
+    const fetchMock = vi.fn<FetchLike>(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => {
+        throw abort
+      }
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      await client().doctypes()
+      throw new Error('expected a throw')
+    } catch (err) {
+      expect(err).toBeInstanceOf(CliError)
+      expect((err as CliError).code).toBe('timeout')
+    }
+  })
+
   it('maps a network failure to a CliError', async () => {
     const fetchMock = vi.fn<FetchLike>(async () => {
       throw new Error('ECONNREFUSED')

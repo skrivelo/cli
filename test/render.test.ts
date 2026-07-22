@@ -24,7 +24,13 @@ function fakeClient(capture: { body?: RenderRequest }, docUrl: string): ApiClien
     timeoutMs: 30000,
     render: async (body: RenderRequest): Promise<RenderResponse> => {
       capture.body = body
-      return { document_url: docUrl, pages: 2, render_ms: 5, renderer_version: 'test' }
+      return {
+        document_url: docUrl,
+        pages: 2,
+        render_ms: 5,
+        renderer_version: 'test',
+        catalog_version: 'cat'
+      }
     }
   } as unknown as ApiClient
 }

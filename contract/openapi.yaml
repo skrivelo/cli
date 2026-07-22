@@ -56,12 +56,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+    post:
+      operationId: pushTemplate
+      summary: Push a custom template (validate → atomic slot-checked store; Starter+).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '201':
+          description: The stored custom template's id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushResponse' }
+        '400':
+          description: Validation failed (carries the `diagnostics` array).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Tier below Starter, or the tier slot cap is reached (slot_limit_exceeded).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /v1/templates/{id}:
     get:
       operationId: describeTemplate
       summary: Describe a template's input contract (the keystone).
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/TemplateId' }
       responses:
         '200':
           description: The template contract.
@@ -108,7 +135,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RenderResponse' }
         '400':
-          description: Invalid request, unknown/invalid theme token, or page cap exceeded.
+          description: >-
+            Invalid request, unknown/invalid theme token, page cap exceeded, or too
+            many explicit page-break markers (too_many_page_breaks).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -122,8 +151,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: >-
+            A concurrent request already holds this Idempotency-Key
+            (idempotency_conflict); retry once it completes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '413':
-          description: Request body or embedded-image count over the input cap.
+          description: Request body, embedded-image count, or decoded image size over the input cap.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -134,6 +170,36 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         default:
           description: Renderer or ledger failure (fail-closed; never an unmetered document).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/checkout:
+    post:
+      operationId: checkout
+      summary: Start a hosted Paddle checkout to upgrade the caller's key to a paid tier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckoutRequest' }
+      responses:
+        '200':
+          description: A hosted checkout URL to send the caller to.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckoutResponse' }
+        '400':
+          description: Missing or non-paid tier.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Billing/checkout temporarily unavailable (Paddle unreachable).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -189,6 +255,141 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /v1/assets:
+    post:
+      operationId: uploadAsset
+      summary: Upload a durable image asset (Lite+); resized server-side, referenced by `img_` id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetUploadRequest' }
+      responses:
+        '201':
+          description: The stored asset.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssetResponse' }
+        '400':
+          description: Not a decodable image, or malformed base64.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: Uploaded bytes over the flat asset cap.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Per-account durable asset byte or count quota exceeded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/assets/{id}:
+    delete:
+      operationId: deleteAsset
+      summary: Delete one of the caller's assets (Lite+).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^img_[0-9a-f]{24}$' }
+      responses:
+        '200':
+          description: Deletion outcome (idempotent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteResponse' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates/{id}/source:
+    get:
+      operationId: pullTemplateSource
+      summary: Pull a curated or owned-custom template's source bundle (Starter+).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/TemplateId' }
+      responses:
+        '200':
+          description: The template source bundle.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSource' }
+        '403':
+          description: Tier below Starter.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Unknown template id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates/validate:
+    post:
+      operationId: validateTemplate
+      summary: Validate a custom-template bundle; returns diagnostics without storing (Starter+).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '200':
+          description: Validation result (valid=false when any error-severity diagnostic is present).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidateResponse' }
+        '403':
+          description: Tier below Starter.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates/custom:
+    get:
+      operationId: listCustomTemplates
+      summary: List the caller's custom templates (Starter+).
+      responses:
+        '200':
+          description: The caller's custom templates.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomTemplateList' }
+        '403':
+          description: Tier below Starter.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/templates/custom/{slug}:
+    delete:
+      operationId: deleteCustomTemplate
+      summary: Delete one of the caller's custom templates (Starter+).
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_-]*$' }
+      responses:
+        '200':
+          description: Deletion outcome (idempotent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteResponse' }
+        '403':
+          description: Tier below Starter.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -218,6 +419,12 @@ components:
         period: { type: string }
         limit: { type: integer }
         limit_bytes: { type: integer }
+        required: { type: string }
+        current: { type: string }
+        tier: { type: string }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
     DocType:
       type: object
       additionalProperties: false
@@ -226,12 +433,20 @@ components:
         type: { type: string }
         label: { type: string }
         count: { type: integer }
+    TemplateId:
+      type: string
+      maxLength: 128
+      pattern: '^(?:[a-z0-9][a-z0-9_-]*|acct_[0-9a-f]+~[a-z0-9][a-z0-9_-]*|@[a-z0-9][a-z0-9_-]*~[a-z0-9][a-z0-9_-]*)(?:@[1-9][0-9]*)?$'
+      description: >-
+        Template id (single URL path segment). Curated templates use a bare slug
+        (e.g. `crisp-invoice-invoice`); `acct_<id>~<slug>`, `@<version>`, and
+        `@<handle>~<slug>` are reserved. This release serves curated slugs only.
     TemplateCard:
       type: object
       additionalProperties: false
       required: [id, name, doc_type, summary]
       properties:
-        id: { type: string }
+        id: { $ref: '#/components/schemas/TemplateId' }
         name: { type: string }
         doc_type: { type: string }
         summary: { type: string }
@@ -278,9 +493,22 @@ components:
       type: object
       additionalProperties: false
       required:
-        [id, doc_type, name, content_fields, theme_tokens, locales, page_format, sample_payload]
+        [
+          id,
+          doc_type,
+          name,
+          content_fields,
+          theme_tokens,
+          locales,
+          page_format,
+          sample_payload,
+          catalog_version
+        ]
       properties:
-        id: { type: string }
+        id: { $ref: '#/components/schemas/TemplateId' }
+        catalog_version:
+          type: string
+          description: Content hash of the corpus snapshot this contract was built from.
         doc_type: { type: string }
         name: { type: string }
         content_fields:
@@ -299,7 +527,7 @@ components:
       additionalProperties: false
       required: [template_id]
       properties:
-        template_id: { type: string }
+        template_id: { $ref: '#/components/schemas/TemplateId' }
         content:
           type: object
           additionalProperties: false
@@ -316,12 +544,18 @@ components:
     RenderResponse:
       type: object
       additionalProperties: false
-      required: [document_url, pages, render_ms, renderer_version]
+      required: [document_url, pages, render_ms, renderer_version, catalog_version]
       properties:
         document_url: { type: string }
         pages: { type: integer }
         render_ms: { type: integer }
         renderer_version: { type: string }
+        catalog_version:
+          type: string
+          description: >-
+            Content hash of the curated corpus snapshot this render used. Pins
+            reproducibility together with renderer_version (a re-render of the same
+            inputs under the same pair is byte-comparable).
         warnings:
           type: array
           description: >-
@@ -365,3 +599,104 @@ components:
         key_id: { type: string }
         tier: { type: string }
         monthly_quota: { type: integer }
+    CheckoutRequest:
+      type: object
+      additionalProperties: false
+      required: [tier]
+      properties:
+        tier: { type: string, enum: [lite, starter, business] }
+    CheckoutResponse:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: { type: string }
+    AssetUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: string
+          description: Base64-encoded image bytes (png/jpeg/webp/gif). Resized server-side.
+        content_type: { type: string }
+    AssetResponse:
+      type: object
+      additionalProperties: false
+      required: [asset_id, content_type, width, height, bytes]
+      properties:
+        asset_id: { type: string, pattern: '^img_[0-9a-f]{24}$' }
+        content_type: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        bytes: { type: integer }
+    DeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [deleted]
+      properties:
+        deleted: { type: boolean }
+    Diagnostic:
+      type: object
+      additionalProperties: false
+      required: [severity, where, message]
+      properties:
+        severity: { type: string, enum: [error, warning] }
+        where: { type: string, description: 'Human-locatable site, e.g. `main.html:12`.' }
+        message: { type: string }
+        fix: { type: string }
+    TemplateSource:
+      type: object
+      additionalProperties: false
+      required: [slug, files]
+      properties:
+        slug: { type: string }
+        files:
+          type: object
+          additionalProperties: { type: string }
+          description: Flat filename → text-content map (the pushable bundle).
+    PushRequest:
+      type: object
+      additionalProperties: false
+      required: [slug, files]
+      properties:
+        slug: { type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_-]*$' }
+        files:
+          type: object
+          additionalProperties: { type: string }
+    ValidateResponse:
+      type: object
+      additionalProperties: false
+      required: [valid, diagnostics]
+      properties:
+        valid: { type: boolean }
+        diagnostics:
+          type: array
+          items: { $ref: '#/components/schemas/Diagnostic' }
+    PushResponse:
+      type: object
+      additionalProperties: false
+      required: [id, slug, created, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/TemplateId' }
+        slug: { type: string }
+        created: { type: boolean, description: true on first push of the slug; false on replace-in-place. }
+        updated_at: { type: string }
+    CustomTemplateCard:
+      type: object
+      additionalProperties: false
+      required: [id, slug, bytes, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/TemplateId' }
+        slug: { type: string }
+        bytes: { type: integer }
+        created_at: { type: string }
+        updated_at: { type: string }
+    CustomTemplateList:
+      type: object
+      additionalProperties: false
+      required: [templates]
+      properties:
+        templates:
+          type: array
+          items: { $ref: '#/components/schemas/CustomTemplateCard' }

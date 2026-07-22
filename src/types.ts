@@ -57,6 +57,8 @@ export interface TemplateContract {
   locales: string[]
   page_format: PageFormat
   sample_payload: SamplePayload
+  /** Content hash of the corpus snapshot this contract was built from. */
+  catalog_version: string
 }
 
 export interface RenderContent {
@@ -83,6 +85,8 @@ export interface RenderResponse {
   pages: number
   render_ms: number
   renderer_version: string
+  /** Corpus snapshot hash; with renderer_version it pins render reproducibility. */
+  catalog_version: string
   /** Present only when non-empty (omitted for a clean render). */
   warnings?: RenderWarning[]
 }

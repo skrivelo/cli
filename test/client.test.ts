@@ -50,7 +50,13 @@ describe('ApiClient requests', () => {
 
   it('POSTs the render body as JSON', async () => {
     const fetchMock = vi.fn<FetchLike>(async () =>
-      jsonResponse({ document_url: 'file:///x', pages: 1, render_ms: 2, renderer_version: 'v' })
+      jsonResponse({
+        document_url: 'file:///x',
+        pages: 1,
+        render_ms: 2,
+        renderer_version: 'v',
+        catalog_version: 'cat'
+      })
     )
     vi.stubGlobal('fetch', fetchMock)
     await client().render({ template_id: 't', content: { markdown: '# hi' } })

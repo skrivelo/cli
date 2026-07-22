@@ -73,7 +73,8 @@ describe('CLI types validate against the vendored contract', () => {
       theme_tokens: [{ name: '--accent', default: '#d94545', type: 'color' }],
       locales: ['en', 'de'],
       page_format: { width: 210, height: 297, unit: 'mm' },
-      sample_payload: { markdown: '# Invoice', fields: { client: 'ACME' } }
+      sample_payload: { markdown: '# Invoice', fields: { client: 'ACME' } },
+      catalog_version: 'c0ffee01'
     }
     assertValid('TemplateContract', fixture)
   })
@@ -93,7 +94,8 @@ describe('CLI types validate against the vendored contract', () => {
       document_url: 'https://storage.example/doc.pdf?sig=…',
       pages: 3,
       render_ms: 2760,
-      renderer_version: 'r1'
+      renderer_version: 'r1',
+      catalog_version: 'c0ffee01'
     }
     assertValid('RenderResponse', fixture)
   })

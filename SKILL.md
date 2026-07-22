@@ -65,6 +65,7 @@ Scripts should branch on the exit code:
 - `5` template not found
 - `6` request too large
 - `7` server error
+- `8` tier too low — the template is not in the free-tier catalog (`free_tier: false` on its card); rendering it needs the lite plan or higher
 
 Errors print a readable message; with `--json` the structured error envelope (`{ error: { code, message, hint }, … }`) is emitted for parsing.
 

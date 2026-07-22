@@ -25,7 +25,8 @@ export async function templatesSearchCommand(
     return EXIT.OK
   }
   for (const c of cards) {
-    console.log(`${c.id}\t${c.name} [${c.doc_type}] — ${c.summary}`)
+    const tier = c.free_tier === false ? ' [lite+]' : ''
+    console.log(`${c.id}\t${c.name} [${c.doc_type}]${tier} — ${c.summary}`)
   }
   return EXIT.OK
 }

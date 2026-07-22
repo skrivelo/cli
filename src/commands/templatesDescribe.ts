@@ -23,6 +23,7 @@ export async function templatesDescribeCommand(
     `page: ${c.page_format.width}×${c.page_format.height}${c.page_format.unit}   ` +
       `locales: ${c.locales.join(', ')}`
   )
+  if (c.free_tier === false) console.log('tier: lite or higher required to render')
   console.log('\ncontent fields (map to --field key=value):')
   for (const f of c.content_fields) {
     console.log(`  ${f.key}  (${f.type}${f.required ? ', required' : ''}) — ${f.label}`)

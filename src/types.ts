@@ -15,6 +15,8 @@ export interface TemplateCard {
   name: string
   doc_type: string
   summary: string
+  /** Renderable on the free tier; false ⇒ render requires lite or higher. */
+  free_tier: boolean
 }
 
 export type ContentFieldType =
@@ -59,6 +61,8 @@ export interface TemplateContract {
   sample_payload: SamplePayload
   /** Content hash of the corpus snapshot this contract was built from. */
   catalog_version: string
+  /** Renderable on the free tier; false ⇒ render requires lite or higher. */
+  free_tier: boolean
 }
 
 export interface RenderContent {

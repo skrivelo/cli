@@ -146,6 +146,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: >-
+            The template is not in the free-tier catalog and the key's tier is
+            below lite (insufficient_tier; `free_tier` on the template card marks
+            the boundary).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '404':
           description: Unknown template id.
           content:
@@ -444,12 +452,17 @@ components:
     TemplateCard:
       type: object
       additionalProperties: false
-      required: [id, name, doc_type, summary]
+      required: [id, name, doc_type, summary, free_tier]
       properties:
         id: { $ref: '#/components/schemas/TemplateId' }
         name: { type: string }
         doc_type: { type: string }
         summary: { type: string }
+        free_tier:
+          type: boolean
+          description: >-
+            Renderable on the free tier. False ⇒ render requires the lite tier or
+            higher (discovery and describe stay open to every tier).
     PageFormat:
       type: object
       additionalProperties: false
@@ -502,13 +515,19 @@ components:
           locales,
           page_format,
           sample_payload,
-          catalog_version
+          catalog_version,
+          free_tier
         ]
       properties:
         id: { $ref: '#/components/schemas/TemplateId' }
         catalog_version:
           type: string
           description: Content hash of the corpus snapshot this contract was built from.
+        free_tier:
+          type: boolean
+          description: >-
+            Renderable on the free tier. False ⇒ render requires the lite tier or
+            higher (discovery and describe stay open to every tier).
         doc_type: { type: string }
         name: { type: string }
         content_fields:

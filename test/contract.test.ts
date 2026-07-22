@@ -56,7 +56,8 @@ describe('CLI types validate against the vendored contract', () => {
       id: 'crisp-invoice-invoice',
       name: 'Crisp Invoice',
       doc_type: 'invoice',
-      summary: 'A clean single-column invoice.'
+      summary: 'A clean single-column invoice.',
+      free_tier: true
     }
     assertValid('TemplateCard', fixture)
   })
@@ -74,7 +75,8 @@ describe('CLI types validate against the vendored contract', () => {
       locales: ['en', 'de'],
       page_format: { width: 210, height: 297, unit: 'mm' },
       sample_payload: { markdown: '# Invoice', fields: { client: 'ACME' } },
-      catalog_version: 'c0ffee01'
+      catalog_version: 'c0ffee01',
+      free_tier: false
     }
     assertValid('TemplateContract', fixture)
   })

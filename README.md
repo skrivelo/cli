@@ -80,6 +80,7 @@ Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 | `5` | Template not found |
 | `6` | Request too large |
 | `7` | Server error |
+| `8` | Tier too low (template outside the free-tier catalog) |
 
 ## For agents
 

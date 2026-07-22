@@ -21,13 +21,17 @@ export const EXIT = {
   /** 413 — request body or embedded-image count over the input cap. */
   TOO_LARGE: 6,
   /** 5xx / anything else — renderer or ledger failure. */
-  SERVER: 7
+  SERVER: 7,
+  /** 403 — the key's tier is below what the operation requires (insufficient_tier). */
+  FORBIDDEN: 8
 } as const
 
 export function exitCodeForStatus(status: number): number {
   switch (status) {
     case 401:
       return EXIT.AUTH
+    case 403:
+      return EXIT.FORBIDDEN
     case 429:
       return EXIT.QUOTA
     case 400:

@@ -1,14 +1,17 @@
 /**
  * Self-signup: `signup <email>` mails a one-time code, `signup verify <email>
- * <code>` mints the Free key. The key is shown exactly once by the API, so
- * verify persists it to the config file immediately — unless a different key is
- * already stored, which is never overwritten (it may be unrecoverable).
+ * <code>` mints the key. Verifying rotates: any previous key for the email is
+ * revoked server-side and replaced, so re-running signup recovers a lost key.
+ * The key is shown exactly once by the API, so verify persists it to the config
+ * file immediately — a different stored key is replaced only when the API no
+ * longer accepts it (a still-working one may belong to another email and could
+ * be unrecoverable).
  */
 
 import { saveApiKey, storedApiKey } from '../config.js'
-import { CliError, EXIT } from '../errors.js'
+import { ApiClient } from '../client.js'
+import { ApiError, CliError, EXIT } from '../errors.js'
 import { printJson } from '../output.js'
-import type { ApiClient } from '../client.js'
 import type { ParsedArgs } from '../args.js'
 
 export async function signupCommand(
@@ -39,19 +42,44 @@ async function verify(rest: string[], client: ApiClient, json: boolean): Promise
   }
 
   const minted = await client.verifySignup(email, code)
-  const existing = storedApiKey()
-  const saved = !existing || existing === minted.api_key ? saveApiKey(minted.api_key) : undefined
-  const note = saved
-    ? `Stored in ${saved}`
-    : 'NOT stored: the config file already holds a different key. Save it yourself.'
+  const note = await storeKey(minted.api_key, client)
+  const rotatedNote = minted.rotated
+    ? 'A previous key for this email was revoked and replaced.'
+    : undefined
 
   if (json) {
     printJson(minted)
+    if (rotatedNote) console.error(rotatedNote)
     console.error(note)
   } else {
     console.log(`API key (shown once): ${minted.api_key}`)
     console.log(`Tier: ${minted.tier} · monthly quota: ${minted.monthly_quota} renders`)
+    if (rotatedNote) console.log(rotatedNote)
     console.log(note)
   }
   return EXIT.OK
+}
+
+async function storeKey(freshKey: string, client: ApiClient): Promise<string> {
+  const existing = storedApiKey()
+  if (!existing || existing === freshKey) return `Stored in ${saveApiKey(freshKey)}`
+  if (await keyIsDead(existing, client)) {
+    return `Stored in ${saveApiKey(freshKey)} (replaced a stored key the API no longer accepts)`
+  }
+  return 'NOT stored: the config file holds a different, still-working key. Save it yourself.'
+}
+
+/** Only a definitive 401 counts — a network hiccup must not clobber a live key. */
+async function keyIsDead(key: string, client: ApiClient): Promise<boolean> {
+  const probe = new ApiClient({
+    baseUrl: client.baseUrl,
+    apiKey: key,
+    timeoutMs: client.timeoutMs
+  })
+  try {
+    await probe.doctypes()
+    return false
+  } catch (err) {
+    return err instanceof ApiError && err.status === 401
+  }
 }

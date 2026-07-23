@@ -105,6 +105,8 @@ export interface SignupKeyResponse {
   key_id: string
   tier: string
   monthly_quota: number
+  /** True when a previously issued key for this email was revoked and replaced. */
+  rotated: boolean
 }
 
 /** The structured error envelope every non-2xx response carries. */

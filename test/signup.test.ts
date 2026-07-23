@@ -16,7 +16,13 @@ function jsonResponse(data: unknown, status = 200) {
   }
 }
 
-const MINTED = { api_key: 'krsv_minted', key_id: 'k1', tier: 'free', monthly_quota: 20 }
+const MINTED = {
+  api_key: 'krsv_minted',
+  key_id: 'k1',
+  tier: 'free',
+  monthly_quota: 20,
+  rotated: false
+}
 
 let dir: string
 let logs: string[]
@@ -87,19 +93,61 @@ describe('kursiva signup', () => {
     expect(stored).toEqual({ apiUrl: 'http://api.test/v1', apiKey: 'krsv_minted' })
   })
 
-  it('verify never overwrites a different stored key', async () => {
+  it('verify keeps a different stored key that the API still accepts', async () => {
     mkdirSync(join(dir, 'kursiva'), { recursive: true })
     writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_precious' }))
+    const fetchMock = vi.fn<FetchLike>(async (url) =>
+      String(url).includes('/doctypes')
+        ? jsonResponse([{ type: 'invoice', label: 'Invoice', count: 1 }])
+        : jsonResponse(MINTED)
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const code = await main(['signup', 'verify', 'a@b.co', 'c0de'])
+    expect(code).toBe(0)
+    // The liveness probe authenticates with the STORED key, not the fresh one.
+    const probe = fetchMock.mock.calls.find(([url]) => String(url).includes('/doctypes'))
+    expect((probe?.[1].headers as Record<string, string>).authorization).toBe(
+      'Bearer krsv_precious'
+    )
+    expect(JSON.parse(readFileSync(configPath(), 'utf-8')).apiKey).toBe('krsv_precious')
+    expect(logs.join('\n')).toContain('NOT stored')
+    expect(logs.join('\n')).toContain('krsv_minted')
+  })
+
+  it('verify replaces a stored key the API rejects (rotated away)', async () => {
+    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_stale' }))
     vi.stubGlobal(
       'fetch',
-      vi.fn<FetchLike>(async () => jsonResponse(MINTED))
+      vi.fn<FetchLike>(async (url) =>
+        String(url).includes('/doctypes')
+          ? jsonResponse({ error: { code: 'invalid_key', message: 'unknown key' } }, 401)
+          : jsonResponse({ ...MINTED, rotated: true })
+      )
     )
 
     const code = await main(['signup', 'verify', 'a@b.co', 'c0de'])
     expect(code).toBe(0)
+    expect(JSON.parse(readFileSync(configPath(), 'utf-8')).apiKey).toBe('krsv_minted')
+    expect(logs.join('\n')).toContain('replaced a stored key')
+    expect(logs.join('\n')).toContain('A previous key for this email was revoked')
+  })
+
+  it('a probe network failure never clobbers the stored key', async () => {
+    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_precious' }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<FetchLike>(async (url) => {
+        if (String(url).includes('/doctypes')) throw new Error('ECONNRESET')
+        return jsonResponse(MINTED)
+      })
+    )
+
+    expect(await main(['signup', 'verify', 'a@b.co', 'c0de'])).toBe(0)
     expect(JSON.parse(readFileSync(configPath(), 'utf-8')).apiKey).toBe('krsv_precious')
     expect(logs.join('\n')).toContain('NOT stored')
-    expect(logs.join('\n')).toContain('krsv_minted')
   })
 
   it('--json emits the raw envelope on stdout, the storage note on stderr', async () => {

@@ -114,7 +114,8 @@ describe('CLI types validate against the vendored contract', () => {
       api_key: 'krsv_minted',
       key_id: 'key_01',
       tier: 'free',
-      monthly_quota: 20
+      monthly_quota: 20,
+      rotated: false
     }
     assertValid('SignupKeyResponse', fixture)
   })

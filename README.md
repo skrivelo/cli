@@ -29,7 +29,7 @@ kursiva signup you@example.com          # emails you a one-time code
 kursiva signup verify you@example.com <code>
 ```
 
-`verify` prints the key (the API shows it exactly once) and stores it in `~/.config/kursiva/config.json`, so every later command just works. One key per email.
+`verify` prints the key (the API shows it exactly once) and stores it in `~/.config/kursiva/config.json`, so every later command just works. One key per email — and losing it is fine: run the same two commands again and verifying issues a fresh key, revoking the old one.
 
 ## Authentication
 

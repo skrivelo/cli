@@ -1,0 +1,37 @@
+name: Publish
+
+# npm trusted publishing (OIDC): no token, no OTP. The npmjs.com package settings
+# name this repo + workflow file as the trusted publisher; npm mints short-lived
+# credentials from the job's OIDC token and attaches provenance automatically.
+on:
+  push:
+    tags: ['v*']
+
+env:
+  HUSKY: 0
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      # OIDC publish needs npm >= 11.5.1; don't rely on the bundled minor.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - name: Tag must match package.json version
+        run: |
+          pkg="v$(node -p "require('./package.json').version")"
+          test "$pkg" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != $pkg"; exit 1; }
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run hygiene
+      - run: npm publish

@@ -10,8 +10,8 @@ The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted ca
 ## Setup
 
 - Install: `npm i -g kursiva` (or run ad-hoc with `npx kursiva …`).
-- Auth: set `KURSIVA_API_KEY` in the environment. Optionally set `KURSIVA_API_URL` to target a specific API host.
-- No key yet? Self-signup: `POST https://api.kursiva.com/v1/signup` with `{"email": "you@example.com"}` emails a one-time code; `POST /v1/signup/verify` with `{"email", "code"}` returns a free-tier key (shown once — store it).
+- Auth: set `KURSIVA_API_KEY` in the environment, or rely on `~/.config/kursiva/config.json`. Optionally set `KURSIVA_API_URL` to target a specific API host.
+- No key yet? `kursiva signup <email>` emails a one-time code (a human must read the inbox); then `kursiva signup verify <email> <code>` issues a free-tier key and stores it in the config file — later commands need no env setup.
 
 ## The loop: search → describe → render
 
@@ -38,6 +38,7 @@ The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted ca
 
 ## Commands
 
+- `kursiva signup <email>` / `kursiva signup verify <email> <code>` — get a free API key.
 - `kursiva doctypes` — list document types and how many templates each has.
 - `kursiva templates search [query] --type <doc_type> --locale <l>` — find templates.
 - `kursiva templates describe <id>` — the template's input contract. Run before rendering.

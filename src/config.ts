@@ -1,12 +1,12 @@
 /**
  * Resolve the API key and base URL. Precedence: CLI flag → environment →
- * `~/.config/kursiva/config.json`. The default base URL is provisional until the
- * service is deployed; point it anywhere with `KURSIVA_API_URL` (or `--api-url`).
+ * `~/.config/kursiva/config.json`. Point the client at another host with
+ * `KURSIVA_API_URL` (or `--api-url`).
  */
 
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { CliError, EXIT } from './errors.js'
 import type { ParsedArgs } from './args.js'
 
@@ -18,27 +18,44 @@ export interface CliConfig {
   timeoutMs: number
 }
 
-function configFilePath(): string {
+export function configFilePath(): string {
   const base = process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
   return join(base, 'kursiva', 'config.json')
 }
 
-function readConfigFile(): { apiKey?: string; apiUrl?: string } {
+function readConfigFile(): Record<string, unknown> {
   try {
     const parsed = JSON.parse(readFileSync(configFilePath(), 'utf-8'))
-    return { apiKey: parsed.apiKey, apiUrl: parsed.apiUrl }
+    return parsed && typeof parsed === 'object' ? parsed : {}
   } catch {
     return {}
   }
 }
 
+export function storedApiKey(): string | undefined {
+  const key = readConfigFile().apiKey
+  return typeof key === 'string' && key ? key : undefined
+}
+
+/** Merge the key into the config file (0600 — it holds a credential). */
+export function saveApiKey(apiKey: string): string {
+  const path = configFilePath()
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, `${JSON.stringify({ ...readConfigFile(), apiKey }, null, 2)}\n`, {
+    mode: 0o600
+  })
+  return path
+}
+
 export function loadConfig(parsed: ParsedArgs): CliConfig {
   const file = readConfigFile()
-  const apiKey = parsed.options['--api-key'] || process.env.KURSIVA_API_KEY || file.apiKey
+  const fileApiKey = typeof file.apiKey === 'string' ? file.apiKey : undefined
+  const fileApiUrl = typeof file.apiUrl === 'string' ? file.apiUrl : undefined
+  const apiKey = parsed.options['--api-key'] || process.env.KURSIVA_API_KEY || fileApiKey
   const baseUrl = (
     parsed.options['--api-url'] ||
     process.env.KURSIVA_API_URL ||
-    file.apiUrl ||
+    fileApiUrl ||
     DEFAULT_BASE_URL
   ).replace(/\/+$/, '')
 
@@ -54,7 +71,9 @@ export function loadConfig(parsed: ParsedArgs): CliConfig {
 export function requireApiKey(config: CliConfig): string {
   if (!config.apiKey) {
     throw new CliError(
-      'No API key. Set KURSIVA_API_KEY, pass --api-key, or add it to ~/.config/kursiva/config.json.',
+      'No API key. Get a free one: `kursiva signup you@example.com` emails a code, ' +
+        'then `kursiva signup verify you@example.com <code>` issues and stores the key. ' +
+        'Or set KURSIVA_API_KEY, pass --api-key, or add it to ~/.config/kursiva/config.json.',
       { exitCode: EXIT.AUTH, code: 'no_api_key' }
     )
   }

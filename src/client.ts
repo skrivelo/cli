@@ -11,13 +11,16 @@ import type {
   DocType,
   RenderRequest,
   RenderResponse,
+  SignupAccepted,
+  SignupKeyResponse,
   TemplateCard,
   TemplateContract
 } from './types.js'
 
 export interface ApiClientOptions {
   baseUrl: string
-  apiKey: string
+  /** Absent only for the public signup endpoints — no bearer header is sent. */
+  apiKey?: string
   timeoutMs: number
 }
 
@@ -63,6 +66,14 @@ export class ApiClient {
     return this.request<RenderResponse>('POST', '/render', body)
   }
 
+  signup(email: string): Promise<SignupAccepted> {
+    return this.request<SignupAccepted>('POST', '/signup', { email })
+  }
+
+  verifySignup(email: string, code: string): Promise<SignupKeyResponse> {
+    return this.request<SignupKeyResponse>('POST', '/signup/verify', { email, code })
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     // The abort signal stays armed through the body read — a server that sends
     // headers then stalls the body must still hit `--timeout`, not hang forever.
@@ -72,7 +83,7 @@ export class ApiClient {
       const res = await fetch(`${this.opts.baseUrl}${path}`, {
         method,
         headers: {
-          authorization: `Bearer ${this.opts.apiKey}`,
+          ...(this.opts.apiKey ? { authorization: `Bearer ${this.opts.apiKey}` } : {}),
           accept: 'application/json',
           ...(body !== undefined ? { 'content-type': 'application/json' } : {})
         },

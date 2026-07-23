@@ -14,6 +14,8 @@ import type {
   DocType,
   RenderRequest,
   RenderResponse,
+  SignupAccepted,
+  SignupKeyResponse,
   TemplateCard,
   TemplateContract
 } from '../src/types.js'
@@ -100,6 +102,21 @@ describe('CLI types validate against the vendored contract', () => {
       catalog_version: 'c0ffee01'
     }
     assertValid('RenderResponse', fixture)
+  })
+
+  it('SignupAccepted (what signup reads)', () => {
+    const fixture: SignupAccepted = { status: 'verification_sent' }
+    assertValid('SignupAccepted', fixture)
+  })
+
+  it('SignupKeyResponse (what signup verify reads)', () => {
+    const fixture: SignupKeyResponse = {
+      api_key: 'krsv_minted',
+      key_id: 'key_01',
+      tier: 'free',
+      monthly_quota: 20
+    }
+    assertValid('SignupKeyResponse', fixture)
   })
 
   it('Error envelope with extras', () => {

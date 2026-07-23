@@ -95,6 +95,18 @@ export interface RenderResponse {
   warnings?: RenderWarning[]
 }
 
+export interface SignupAccepted {
+  status: string
+}
+
+export interface SignupKeyResponse {
+  /** The Free-tier key — returned exactly once; the CLI stores it on receipt. */
+  api_key: string
+  key_id: string
+  tier: string
+  monthly_quota: number
+}
+
 /** The structured error envelope every non-2xx response carries. */
 export interface ApiErrorBody {
   error: {

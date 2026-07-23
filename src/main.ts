@@ -14,6 +14,7 @@ import { ApiError, CliError, EXIT } from './errors.js'
 import { printJson } from './output.js'
 import { doctypesCommand } from './commands/doctypes.js'
 import { renderCommand } from './commands/render.js'
+import { signupCommand } from './commands/signup.js'
 import { templatesDescribeCommand } from './commands/templatesDescribe.js'
 import { templatesSearchCommand } from './commands/templatesSearch.js'
 import type { ApiErrorBody } from './types.js'
@@ -40,14 +41,19 @@ export async function main(argv: string[]): Promise<number> {
     }
 
     const config = loadConfig(parsed)
-    config.apiKey = requireApiKey(config)
+    // Signup is the one keyless command — it's how the key is obtained. Its
+    // routes are public; send no bearer even if a key happens to be configured.
+    const signup = command === 'signup'
+    if (!signup) config.apiKey = requireApiKey(config)
     const client = new ApiClient({
       baseUrl: config.baseUrl,
-      apiKey: config.apiKey,
+      apiKey: signup ? undefined : config.apiKey,
       timeoutMs: config.timeoutMs
     })
 
     switch (command) {
+      case 'signup':
+        return await signupCommand(parsed, client, json)
       case 'doctypes':
         return await doctypesCommand(client, json)
       case 'templates': {
@@ -110,6 +116,11 @@ function readVersion(): string {
 }
 
 function usage(command?: string): string {
+  if (command === 'signup') {
+    return `Usage:
+  kursiva signup <email>                  request a free key — emails a one-time code
+  kursiva signup verify <email> <code>    redeem the code; the key is issued once and stored`
+  }
   if (command === 'templates') {
     return `Usage:
   kursiva templates search [query] [--type <doc_type>] [--locale <l>] [--json]
@@ -122,6 +133,8 @@ function usage(command?: string): string {
   return `kursiva — command-line client for the Kursiva render API
 
 Usage:
+  kursiva signup <email>                  get a free API key (emails a one-time code)
+  kursiva signup verify <email> <code>
   kursiva doctypes [--json]
   kursiva templates search [query] [--type <doc_type>] [--locale <l>] [--json]
   kursiva templates describe <id> [--json]
@@ -129,6 +142,7 @@ Usage:
 
 Auth:
   Set KURSIVA_API_KEY (or --api-key), and optionally KURSIVA_API_URL (or --api-url).
+  No key yet? \`kursiva signup <email>\` issues a free-tier key — no card, no account form.
 
 Global flags:
   --json       machine-readable output on every command

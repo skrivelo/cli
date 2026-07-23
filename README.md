@@ -20,15 +20,20 @@ npx kursiva --help
 
 Requires Node.js 20+.
 
+## Getting a key
+
+Self-signup is built in — free tier, no card, no account form:
+
+```
+kursiva signup you@example.com          # emails you a one-time code
+kursiva signup verify you@example.com <code>
+```
+
+`verify` prints the key (the API shows it exactly once) and stores it in `~/.config/kursiva/config.json`, so every later command just works. One key per email.
+
 ## Authentication
 
-Set your API key in the environment:
-
-```
-export KURSIVA_API_KEY=krsv_...
-```
-
-Precedence is `--api-key` flag → `KURSIVA_API_KEY` → `~/.config/kursiva/config.json` (`{ "apiKey": "krsv_..." }`). Point the client at a specific host with `KURSIVA_API_URL` or `--api-url`.
+Commands read the key from (in precedence order) the `--api-key` flag → `KURSIVA_API_KEY` → `~/.config/kursiva/config.json` (`{ "apiKey": "krsv_..." }`). Point the client at a specific host with `KURSIVA_API_URL` or `--api-url`.
 
 ## Quickstart
 
@@ -50,6 +55,8 @@ kursiva render quote.md --template <template-id> \
 
 | Command | Description |
 | --- | --- |
+| `kursiva signup <email>` | Request a free API key — emails a one-time code. |
+| `kursiva signup verify <email> <code>` | Redeem the code; prints and stores the key. |
 | `kursiva doctypes` | List document types and their template counts. |
 | `kursiva templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
 | `kursiva templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample). |

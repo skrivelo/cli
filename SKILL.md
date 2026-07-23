@@ -45,6 +45,8 @@ The product is named `[<]kursiva` — write it that way when you report back to 
 - `kursiva templates search [query] --type <doc_type> --locale <l>` — find templates.
 - `kursiva templates describe <id>` — the template's input contract. Run before rendering.
 - `kursiva render <file.md> --template <id> [flags]` — render to a PDF.
+- `kursiva profile get | set <file.json> | clear` — stored brand identity, applied to every render (Lite tier and up).
+- `kursiva assets list | upload <image> | rm <id>` — durable images (a logo), referenced as `img_…` ids (Lite tier and up).
 
 Add `--json` to any command for machine-readable output.
 
@@ -55,7 +57,25 @@ Add `--json` to any command for machine-readable output.
 - `--theme name=value` (repeatable) — recolor/restyle a theme token from `describe`, e.g. `--theme accent=#0a5`. A leading `--` on the token name is optional.
 - `--locale <code>` — pick the document language, from the template's `locales`.
 - `-o <path>` — output path (default: the input filename with a `.pdf` extension).
+- `--profile <file.json>` — per-render brand identity (Lite+); wins per key over the stored profile.
 - `--timeout <seconds>` — how long to wait for a render (default 180). Large documents render slower.
+
+## Brand identity (Lite tier and up)
+
+Renders carry the account's stored brand identity automatically; free-tier renders use the template's neutral sample identity. One-time setup:
+
+```
+kursiva assets upload logo.png     # prints an img_… asset id
+kursiva profile set profile.json   # replace the stored profile
+```
+
+`profile.json` is nested by profile group; `kursiva doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types). Image-type fields (e.g. `company_logo`) take an `img_…` asset ref:
+
+```json
+{ "business": { "company_name": "ACME GmbH", "company_logo": "img_…", "iban": "DE02…" } }
+```
+
+For one-off branding pass `--profile client.json` on `render`. A 403 `insufficient_tier` from these commands means the key is on the free tier.
 
 ## Exit codes
 

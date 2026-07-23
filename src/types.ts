@@ -8,6 +8,10 @@ export interface DocType {
   type: string
   label: string
   count: number
+  /** Profile group this type reads brand identity from — the top-level profile key. */
+  profile_group?: string
+  /** Profile fields templates of this type may render (brand-payload contract). */
+  profile_fields?: { key: string; type: string }[]
 }
 
 export interface TemplateCard {
@@ -75,7 +79,37 @@ export interface RenderRequest {
   content?: RenderContent
   theme?: Record<string, string>
   locale?: string
+  /** Per-request brand identity (Lite+); wins per key over the stored profile. */
+  profile?: BrandProfile
   options?: Record<string, unknown>
+}
+
+/** Brand identity nested by profile group → field key → value (Lite+).
+ *  Image-type fields take an uploaded `img_…` asset ref. */
+export type BrandProfile = Record<string, Record<string, string | number>>
+
+export interface ProfileResponse {
+  profile: BrandProfile
+}
+
+export interface AssetUploadResponse {
+  asset_id: string
+  content_type: string
+  width: number
+  height: number
+  bytes: number
+}
+
+export interface AssetInfo extends AssetUploadResponse {
+  created_at: string
+}
+
+export interface AssetListResponse {
+  assets: AssetInfo[]
+}
+
+export interface DeleteResponse {
+  deleted: boolean
 }
 
 /** A non-fatal render warning; only `mermaid_render_failed` is emitted today. */

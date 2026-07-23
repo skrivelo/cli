@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { parseKvPairs } from '../args.js'
+import { readProfileFile } from './profile.js'
 import { downloadTo } from '../download.js'
 import { CliError, EXIT } from '../errors.js'
 import { BRANDING, printJson } from '../output.js'
@@ -35,6 +36,7 @@ export async function renderCommand(
   const body: RenderRequest = { template_id: templateId, content }
   if (Object.keys(theme).length > 0) body.theme = theme
   if (parsed.options['--locale']) body.locale = parsed.options['--locale']
+  if (parsed.options['--profile']) body.profile = readProfileFile(parsed.options['--profile'])
 
   const res = await client.render(body)
   const outPath = resolve(parsed.options['--output'] ?? defaultOutName(file))

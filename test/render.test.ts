@@ -70,6 +70,32 @@ describe('renderCommand', () => {
     expect(readFileSync(out, 'utf-8')).toContain('%PDF')
   })
 
+  it('maps --profile <file.json> onto the request body', async () => {
+    const md = join(dir, 'invoice.md')
+    writeFileSync(md, '# Invoice\n')
+    const srcPdf = join(dir, 'src.pdf')
+    writeFileSync(srcPdf, '%PDF-1.4')
+    const profilePath = join(dir, 'brand.json')
+    writeFileSync(profilePath, JSON.stringify({ business: { company_name: 'ACME' } }))
+    const out = join(dir, 'out.pdf')
+
+    const capture: { body?: RenderRequest } = {}
+    const client = fakeClient(capture, pathToFileURL(srcPdf).href)
+    const parsed = parseArgs([
+      'render',
+      md,
+      '--template',
+      'inv-1',
+      '--profile',
+      profilePath,
+      '-o',
+      out
+    ])
+
+    expect(await renderCommand(parsed, client, true)).toBe(0)
+    expect(capture.body?.profile).toEqual({ business: { company_name: 'ACME' } })
+  })
+
   it('derives the default output name from the input file', async () => {
     const md = join(dir, 'report.md')
     writeFileSync(md, '# Report\n')

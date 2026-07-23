@@ -12,7 +12,9 @@ import { ApiClient } from './client.js'
 import { loadConfig, requireApiKey } from './config.js'
 import { ApiError, CliError, EXIT } from './errors.js'
 import { printJson } from './output.js'
+import { assetsCommand } from './commands/assets.js'
 import { doctypesCommand } from './commands/doctypes.js'
+import { profileCommand } from './commands/profile.js'
 import { renderCommand } from './commands/render.js'
 import { signupCommand } from './commands/signup.js'
 import { templatesDescribeCommand } from './commands/templatesDescribe.js'
@@ -65,6 +67,10 @@ export async function main(argv: string[]): Promise<number> {
       }
       case 'render':
         return await renderCommand(parsed, client, json)
+      case 'profile':
+        return await profileCommand(parsed, client, json)
+      case 'assets':
+        return await assetsCommand(parsed, client, json)
       default:
         console.error(`Unknown command: ${command}\n\n${usage()}`)
         return EXIT.USAGE
@@ -128,7 +134,23 @@ function usage(command?: string): string {
   }
   if (command === 'render') {
     return `Usage:
-  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--locale <l>] [-o out.pdf] [--timeout <s>] [--json]`
+  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--locale <l>] [--profile <file.json>] [-o out.pdf] [--timeout <s>] [--json]`
+  }
+  if (command === 'profile') {
+    return `Usage:
+  kursiva profile get                 show the stored brand profile (Lite+)
+  kursiva profile set <profile.json>  replace it — applied to every render
+  kursiva profile clear               delete it — renders return to the neutral identity
+
+profile.json is nested by profile group (see \`kursiva doctypes\` for each
+type's profile_group and field keys), e.g.
+  {"business": {"company_name": "ACME GmbH", "company_logo": "img_…"}}`
+  }
+  if (command === 'assets') {
+    return `Usage:
+  kursiva assets list                 list uploaded assets and their img_… ids (Lite+)
+  kursiva assets upload <image>       upload an image — prints its img_… id
+  kursiva assets rm <img_id>          delete an asset`
   }
   return `[<]kursiva — command-line client for the render API
 
@@ -138,7 +160,9 @@ Usage:
   kursiva doctypes [--json]
   kursiva templates search [query] [--type <doc_type>] [--locale <l>] [--json]
   kursiva templates describe <id> [--json]
-  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [-o out.pdf] [--json]
+  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--profile <file.json>] [-o out.pdf] [--json]
+  kursiva profile get|set <file.json>|clear   stored brand identity (Lite+)
+  kursiva assets list|upload <image>|rm <id>  durable images, e.g. your logo (Lite+)
 
 Auth:
   Set KURSIVA_API_KEY (or --api-key), and optionally KURSIVA_API_URL (or --api-url).

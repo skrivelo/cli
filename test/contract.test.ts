@@ -11,7 +11,9 @@ import { parse as parseYaml } from 'yaml'
 import { describe, expect, it } from 'vitest'
 import type {
   ApiErrorBody,
+  AssetListResponse,
   DocType,
+  ProfileResponse,
   RenderRequest,
   RenderResponse,
   SignupAccepted,
@@ -53,6 +55,20 @@ describe('CLI types validate against the vendored contract', () => {
     assertValid('DocType', fixture)
   })
 
+  it('DocType with the brand-payload contract', () => {
+    const fixture: DocType = {
+      type: 'invoice',
+      label: 'Invoice',
+      count: 42,
+      profile_group: 'business',
+      profile_fields: [
+        { key: 'company_name', type: 'text' },
+        { key: 'company_logo', type: 'image' }
+      ]
+    }
+    assertValid('DocType', fixture)
+  })
+
   it('TemplateCard', () => {
     const fixture: TemplateCard = {
       id: 'crisp-invoice-invoice',
@@ -91,6 +107,41 @@ describe('CLI types validate against the vendored contract', () => {
       locale: 'en'
     }
     assertValid('RenderRequest', fixture)
+  })
+
+  it('RenderRequest with a per-request brand profile', () => {
+    const fixture: RenderRequest = {
+      template_id: 'crisp-invoice-invoice',
+      content: { markdown: '# Invoice' },
+      profile: {
+        business: { company_name: 'ACME GmbH', company_logo: `img_${'a'.repeat(24)}` }
+      }
+    }
+    assertValid('RenderRequest', fixture)
+  })
+
+  it('ProfileResponse (what profile get/set read)', () => {
+    const fixture: ProfileResponse = {
+      profile: { business: { company_name: 'ACME GmbH', tax_id: 'DE123456789' } }
+    }
+    assertValid('ProfileResponse', fixture)
+    assertValid('ProfilePutRequest', fixture)
+  })
+
+  it('AssetListResponse (what assets list reads)', () => {
+    const fixture: AssetListResponse = {
+      assets: [
+        {
+          asset_id: `img_${'b'.repeat(24)}`,
+          content_type: 'image/png',
+          width: 320,
+          height: 96,
+          bytes: 4096,
+          created_at: '2026-07-24T00:00:00.000Z'
+        }
+      ]
+    }
+    assertValid('AssetListResponse', fixture)
   })
 
   it('RenderResponse (what the CLI reads)', () => {

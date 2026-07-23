@@ -8,7 +8,12 @@
 import { ApiError, CliError, EXIT } from './errors.js'
 import type {
   ApiErrorBody,
+  AssetListResponse,
+  AssetUploadResponse,
+  BrandProfile,
+  DeleteResponse,
   DocType,
+  ProfileResponse,
   RenderRequest,
   RenderResponse,
   SignupAccepted,
@@ -64,6 +69,30 @@ export class ApiClient {
 
   render(body: RenderRequest): Promise<RenderResponse> {
     return this.request<RenderResponse>('POST', '/render', body)
+  }
+
+  getProfile(): Promise<ProfileResponse> {
+    return this.request<ProfileResponse>('GET', '/profile')
+  }
+
+  putProfile(profile: BrandProfile): Promise<ProfileResponse> {
+    return this.request<ProfileResponse>('PUT', '/profile', { profile })
+  }
+
+  deleteProfile(): Promise<DeleteResponse> {
+    return this.request<DeleteResponse>('DELETE', '/profile')
+  }
+
+  listAssets(): Promise<AssetListResponse> {
+    return this.request<AssetListResponse>('GET', '/assets')
+  }
+
+  uploadAsset(base64Data: string): Promise<AssetUploadResponse> {
+    return this.request<AssetUploadResponse>('POST', '/assets', { data: base64Data })
+  }
+
+  deleteAsset(assetId: string): Promise<DeleteResponse> {
+    return this.request<DeleteResponse>('DELETE', `/assets/${encodeURIComponent(assetId)}`)
   }
 
   signup(email: string): Promise<SignupAccepted> {

@@ -61,6 +61,8 @@ kursiva render quote.md --template <template-id> \
 | `kursiva templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
 | `kursiva templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample). |
 | `kursiva render <file.md> --template <id> [flags]` | Render Markdown + fields to a PDF. |
+| `kursiva profile get \| set <file.json> \| clear` | Stored brand identity, applied to every render (Lite+). |
+| `kursiva assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (Lite+). |
 
 Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 
@@ -73,7 +75,25 @@ Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 | `--theme name=value` | Recolor/restyle a theme token (repeatable). |
 | `--locale <code>` | Document language, from the template's locales. |
 | `-o <path>` | Output path (default: the input file with a `.pdf` extension). |
+| `--profile <file.json>` | Per-render brand identity; wins per key over the stored profile (Lite+). |
 | `--timeout <seconds>` | How long to wait for a render (default 180). |
+
+## Brand identity (Lite+)
+
+Store your identity once and every render carries it; free-tier renders use each template's neutral brand bundle.
+
+```bash
+kursiva assets upload logo.png     # → img_… asset id
+kursiva profile set profile.json   # applied to every subsequent render
+```
+
+`profile.json` is nested by *profile group* — `kursiva doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types):
+
+```json
+{ "business": { "company_name": "ACME GmbH", "company_logo": "img_…", "iban": "DE02…" } }
+```
+
+Image-type fields take an uploaded `img_…` asset ref. For one-off branding (e.g. per client), pass `--profile client.json` on `render` — it overrides the stored profile per key for that render only.
 
 ## Exit codes
 

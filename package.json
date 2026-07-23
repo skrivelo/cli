@@ -1,6 +1,6 @@
 {
   "name": "kursiva",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Command-line client for the [<]kursiva render API — turn Markdown into print-grade PDFs from any shell.",
   "type": "module",
   "bin": {

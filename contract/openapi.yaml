@@ -150,9 +150,9 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '403':
           description: >-
-            The template is not in the free-tier catalog and the key's tier is
-            below lite (insufficient_tier; `free_tier` on the template card marks
-            the boundary).
+            insufficient_tier — the template is not in the free-tier catalog
+            (`free_tier` on the template card marks the boundary), or the request
+            carries a `profile` on a key below lite.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -266,6 +266,20 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
   /v1/assets:
+    get:
+      operationId: listAssets
+      summary: List the caller's stored assets (Lite+), oldest first.
+      responses:
+        '200':
+          description: The account's stored assets.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssetListResponse' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     post:
       operationId: uploadAsset
       summary: Upload a durable image asset (Lite+); resized server-side, referenced by `img_` id.
@@ -309,6 +323,68 @@ paths:
           in: path
           required: true
           schema: { type: string, pattern: '^img_[0-9a-f]{24}$' }
+      responses:
+        '200':
+          description: Deletion outcome (idempotent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteResponse' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/profile:
+    get:
+      operationId: getProfile
+      summary: The caller's stored brand profile (Lite+); empty object when unset.
+      responses:
+        '200':
+          description: The stored profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileResponse' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    put:
+      operationId: putProfile
+      summary: >-
+        Replace the stored brand profile (Lite+). Applied to every subsequent
+        render under the account; the render body's `profile` field wins per key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfilePutRequest' }
+      responses:
+        '200':
+          description: The stored profile as saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileResponse' }
+        '400':
+          description: >-
+            Invalid group/field name, too many groups or fields, or an img_ ref
+            that is not an existing asset of this account (invalid_asset_ref).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Tier below Lite.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: Profile over the serialized size cap (profile_too_large).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: deleteProfile
+      summary: Delete the stored brand profile (Lite+); renders return to the neutral identity.
       responses:
         '200':
           description: Deletion outcome (idempotent).
@@ -443,6 +519,21 @@ components:
         type: { type: string }
         label: { type: string }
         count: { type: integer }
+        profile_group:
+          type: string
+          description: >-
+            The profile group this document type reads its brand identity from —
+            the top-level key to use in a stored or per-request profile.
+        profile_fields:
+          type: array
+          description: The profile fields templates of this type may render.
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, type]
+            properties:
+              key: { type: string }
+              type: { type: string }
     TemplateId:
       type: string
       maxLength: 128
@@ -559,6 +650,19 @@ components:
           type: object
           additionalProperties: { type: string }
         locale: { type: string }
+        profile:
+          type: object
+          description: >-
+            Per-request brand identity (Lite+), nested by profile group (see
+            `profile_group` on GET /v1/doctypes). Merged over the account's
+            stored profile per key within each group — this field wins. Values
+            replace the template's neutral sample identity; image-type fields
+            take an uploaded asset ref (img_…). With an Idempotency-Key, a
+            replay returns the FIRST render's result even if the stored profile
+            changed in between.
+          additionalProperties:
+            type: object
+            additionalProperties: { type: [string, number] }
         options:
           type: object
           additionalProperties: true
@@ -635,6 +739,45 @@ components:
       required: [url]
       properties:
         url: { type: string }
+    BrandProfile:
+      type: object
+      description: >-
+        Brand identity nested by profile group → field key → value. Group and
+        key names are 1-64 chars of [a-z0-9_] starting with a letter; image-type
+        fields take an uploaded asset ref (img_…).
+      additionalProperties:
+        type: object
+        additionalProperties: { type: [string, number] }
+    ProfilePutRequest:
+      type: object
+      additionalProperties: false
+      required: [profile]
+      properties:
+        profile: { $ref: '#/components/schemas/BrandProfile' }
+    ProfileResponse:
+      type: object
+      additionalProperties: false
+      required: [profile]
+      properties:
+        profile: { $ref: '#/components/schemas/BrandProfile' }
+    AssetListResponse:
+      type: object
+      additionalProperties: false
+      required: [assets]
+      properties:
+        assets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [asset_id, content_type, width, height, bytes, created_at]
+            properties:
+              asset_id: { type: string, pattern: '^img_[0-9a-f]{24}$' }
+              content_type: { type: string }
+              width: { type: integer }
+              height: { type: integer }
+              bytes: { type: integer }
+              created_at: { type: string }
     AssetUploadRequest:
       type: object
       additionalProperties: false

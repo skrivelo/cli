@@ -11,6 +11,7 @@ The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted ca
 
 - Install: `npm i -g kursiva` (or run ad-hoc with `npx kursiva …`).
 - Auth: set `KURSIVA_API_KEY` in the environment. Optionally set `KURSIVA_API_URL` to target a specific API host.
+- No key yet? Self-signup: `POST https://api.kursiva.com/v1/signup` with `{"email": "you@example.com"}` emails a one-time code; `POST /v1/signup/verify` with `{"email", "code"}` returns a free-tier key (shown once — store it).
 
 ## The loop: search → describe → render
 
@@ -18,13 +19,13 @@ The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted ca
    ```
    kursiva templates search "quotation" --type quotation --json
    ```
-   Returns `[{ id, name, doc_type, summary }]`. Pick an `id`.
+   Returns `[{ id, name, doc_type, summary, free_tier }]`. Pick an `id`. On a free-tier key, only templates with `free_tier: true` will render — others fail with exit 8.
 
 2. **Read its input contract** (always do this before rendering):
    ```
    kursiva templates describe <id> --json
    ```
-   Returns `{ content_fields, theme_tokens, locales, page_format, sample_payload }`.
+   Returns `{ content_fields, theme_tokens, locales, page_format, sample_payload, … }`.
    - `content_fields` → each `{ key, type, required }` is a `--field key=value` you can pass.
    - `theme_tokens` → each `{ name, type, default }` is a `--theme name=value` you can recolor.
    - `sample_payload` shows a working example of the Markdown body + fields.
@@ -47,7 +48,7 @@ Add `--json` to any command for machine-readable output.
 ## `render` flags
 
 - `--template <id>` (required) — a template id from `search`.
-- `--field key=value` (repeatable) — a content field from `describe`, e.g. `--field client=ACME --field due_date=2026-01-31`. Fields the template does not declare are ignored.
+- `--field key=value` (repeatable) — a content field from `describe`, e.g. `--field client=ACME --field due_date=2026-01-31`. Fields the template does not declare are ignored. Multi-line values (fields of type `block`) take literal newlines — in a shell use `$'…\n…'`, e.g. `--field client=$'ACME GmbH\nJane Doe'`.
 - `--theme name=value` (repeatable) — recolor/restyle a theme token from `describe`, e.g. `--theme accent=#0a5`. A leading `--` on the token name is optional.
 - `--locale <code>` — pick the document language, from the template's `locales`.
 - `-o <path>` — output path (default: the input filename with a `.pdf` extension).

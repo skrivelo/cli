@@ -137,5 +137,6 @@ Global flags:
 
 Exit codes:
   0 success · 1 usage/file/network · 2 auth (401) · 3 quota (429) ·
-  4 bad request/page cap (400) · 5 not found (404) · 6 too large (413) · 7 server (5xx)`
+  4 bad request/page cap (400) · 5 not found (404) · 6 too large (413) · 7 server (5xx) ·
+  8 tier too low (403)`
 }

@@ -130,7 +130,7 @@ function usage(command?: string): string {
     return `Usage:
   kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--locale <l>] [-o out.pdf] [--timeout <s>] [--json]`
   }
-  return `kursiva — command-line client for the Kursiva render API
+  return `[<]kursiva — command-line client for the render API
 
 Usage:
   kursiva signup <email>                  get a free API key (emails a one-time code)

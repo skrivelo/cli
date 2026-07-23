@@ -1,8 +1,8 @@
-# kursiva
+# [<]kursiva
 
 **Turn Markdown into a print-grade, professionally designed PDF — from any shell.**
 
-`kursiva` is a small command-line client for the Kursiva render API. Point it at a Markdown file, pick a template from a hosted catalog of professionally designed documents, and get a finished PDF on disk. No design skills, no HTML, no headless browser — the rendering happens server-side.
+`kursiva` is a small command-line client for the [<]kursiva render API. Point it at a Markdown file, pick a template from a hosted catalog of professionally designed documents, and get a finished PDF on disk. No design skills, no HTML, no headless browser — the rendering happens server-side.
 
 ```
 markdown in  →  kursiva render  →  polished PDF out

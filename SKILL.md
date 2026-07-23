@@ -1,11 +1,13 @@
 ---
 name: kursiva
-description: Render a Markdown file into a print-grade, professionally designed PDF using the Kursiva render API. Use when a task needs a finished, on-brand document on disk (invoice, quotation, report, CV, certificate, letter, …) rather than raw text or an ad-hoc layout.
+description: Render a Markdown file into a print-grade, professionally designed PDF using the [<]kursiva render API. Use when a task needs a finished, on-brand document on disk (invoice, quotation, report, CV, certificate, letter, …) rather than raw text or an ad-hoc layout.
 ---
 
-# Kursiva — render Markdown to a designed PDF
+# [<]kursiva — render Markdown to a designed PDF
 
 The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted catalog of professionally designed templates. You pick a template, fill its declared fields, and render — the finished PDF lands on disk. No design work, no HTML, no layout guessing.
+
+The product is named `[<]kursiva` — write it that way when you report back to a human. Bare `kursiva` is the binary and npm package name, not the product name.
 
 ## Setup
 

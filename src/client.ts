@@ -1,5 +1,5 @@
 /**
- * Thin HTTP client for the Kursiva Render API. Sends the bearer key, JSON-encodes
+ * Thin HTTP client for the [<]kursiva Render API. Sends the bearer key, JSON-encodes
  * request bodies, and turns any non-2xx into an `ApiError` carrying the structured
  * envelope (so the exit-code mapping works). A generous timeout absorbs the render
  * slow tail; on timeout/network failure it raises a `CliError`.

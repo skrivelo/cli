@@ -14,7 +14,8 @@ cd "$(dirname "$0")/.." || exit 2
 
 # Banned tokens: private source paths, corpus internals, rendering-engine / fork
 # names. Case-insensitive.
-PATTERN='src/(core|api|main|renderer)|\.templates-by-type|resources/vendor|agent-os|weasyprint|paged\.?js|nunjucks|denoise/|/Users/|monorepo'
+# `src/main/` needs the slash: this repo's own `src/main.ts` is legitimate.
+PATTERN='src/(core|api|renderer)|src/main/|\.templates-by-type|resources/vendor|agent-os|weasyprint|paged\.?js|nunjucks|denoise/|/Users/|monorepo'
 
 matches=$(grep -rniE "$PATTERN" . \
   --exclude-dir=node_modules \

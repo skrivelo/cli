@@ -27,10 +27,11 @@ The product is named `[<]kursiva` — write it that way when you report back to 
    ```
    kursiva templates describe <id> --json
    ```
-   Returns `{ content_fields, theme_tokens, locales, page_format, sample_payload, … }`.
+   Returns `{ content_fields, theme_tokens, locales, page_format, sample_payload, content_prompt, … }`.
    - `content_fields` → each `{ key, type, required }` is a `--field key=value` you can pass.
    - `theme_tokens` → each `{ name, type, default }` is a `--theme name=value` you can recolor.
    - `sample_payload` shows a working example of the Markdown body + fields.
+   - `content_prompt` → the template author's content rules; when non-null, follow them in the Markdown and fields you write.
 
 3. **Render** — the Markdown file is the document body; `--field` supplies the structured values:
    ```

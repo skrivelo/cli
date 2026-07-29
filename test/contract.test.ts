@@ -94,9 +94,12 @@ describe('CLI types validate against the vendored contract', () => {
       page_format: { width: 210, height: 297, unit: 'mm' },
       sample_payload: { markdown: '# Invoice', fields: { client: 'ACME' } },
       catalog_version: 'c0ffee01',
-      free_tier: false
+      free_tier: false,
+      content_prompt: 'Invoice totals exclude VAT; list it as a separate line.'
     }
     assertValid('TemplateContract', fixture)
+    // The corpus serves null for templates that declare no content rules.
+    assertValid('TemplateContract', { ...fixture, content_prompt: null })
   })
 
   it('RenderRequest (what the CLI sends)', () => {
@@ -181,6 +184,23 @@ describe('CLI types validate against the vendored contract', () => {
       quota: 20,
       used: 20,
       period: '2026-07'
+    }
+    assertValid('Error', fixture)
+  })
+
+  it('Error envelope carrying unrenderable_svg findings (422)', () => {
+    const fixture: ApiErrorBody = {
+      error: {
+        code: 'unrenderable_svg',
+        message: 'The content carries an SVG construct the renderer cannot reproduce.'
+      },
+      findings: [
+        {
+          elementPath: 'data-uri[0]:/svg/rect[1]',
+          primitives: ['feGaussianBlur'],
+          reason: 'unsupported'
+        }
+      ]
     }
     assertValid('Error', fixture)
   })

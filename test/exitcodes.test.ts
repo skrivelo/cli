@@ -6,6 +6,7 @@ describe('exitCodeForStatus', () => {
     expect(exitCodeForStatus(401)).toBe(EXIT.AUTH) // 2
     expect(exitCodeForStatus(429)).toBe(EXIT.QUOTA) // 3
     expect(exitCodeForStatus(400)).toBe(EXIT.BAD_REQUEST) // 4
+    expect(exitCodeForStatus(422)).toBe(EXIT.BAD_REQUEST) // 4 — permanent for this body, never a server fault
     expect(exitCodeForStatus(404)).toBe(EXIT.NOT_FOUND) // 5
     expect(exitCodeForStatus(413)).toBe(EXIT.TOO_LARGE) // 6
     expect(exitCodeForStatus(403)).toBe(EXIT.FORBIDDEN) // 8

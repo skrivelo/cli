@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "[<]kursiva Render API"
+  title: '[<]kursiva Render API'
   version: '1.0'
   description: >-
     Deterministic, no-AI template + render service. The calling agent is the
@@ -119,8 +119,12 @@ paths:
           required: false
           description: >-
             Opaque retry key (1–255 chars of [A-Za-z0-9._:-]). Repeating a value
-            for the same API key returns the original result without re-rendering
-            or re-billing; absent, every call is metered independently. An
+            for the same API key AND the same request body returns the original
+            result without re-rendering or re-billing; absent, every call is
+            metered independently. The stored result is bound to the request that
+            produced it, so reusing a key for a different body returns 422
+            idempotency_mismatch rather than the earlier document — mint a new key
+            per distinct request. `options` is ignored for this comparison. An
             out-of-range value returns 400 invalid_request.
           schema:
             type: string
@@ -170,6 +174,18 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '413':
           description: Request body, embedded-image count, or decoded image size over the input cap.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: >-
+            Permanent for this request as sent; do not retry it unchanged.
+            `idempotency_mismatch` — this Idempotency-Key was already used with a
+            different request body. `unrenderable_svg` — the content carries an
+            SVG construct WeasyPrint cannot reproduce (a `<filter>`, or one of
+            three mask conditions), so the PDF would not match what the content
+            describes; `findings` names the offending primitive per element.
+            Remove the filter or flatten the region to a raster.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -382,6 +398,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: >-
+            A profile field holds SVG using constructs the renderer cannot
+            reproduce (unrenderable_svg); `findings` names each primitive.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     delete:
       operationId: deleteProfile
       summary: Delete the stored brand profile (Lite+); renders return to the neutral identity.
@@ -482,7 +505,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: krsv
-      description: "A `krsv_`-prefixed API key sent as `Authorization: Bearer krsv_…`."
+      description: 'A `krsv_`-prefixed API key sent as `Authorization: Bearer krsv_…`.'
   schemas:
     Error:
       type: object
@@ -511,6 +534,34 @@ components:
         diagnostics:
           type: array
           items: { $ref: '#/components/schemas/Diagnostic' }
+        findings:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/FilterFinding' }
+    FilterFinding:
+      type: object
+      additionalProperties: false
+      required: [elementPath, primitives, reason]
+      description: >-
+        One SVG region the render cannot reproduce — a construct WeasyPrint
+        cannot reproduce, an external dependency the bake cannot fetch, or a
+        filter region too large to rasterize at device resolution. Carried by
+        `unrenderable_svg` (422) so a caller can locate and remove it.
+      properties:
+        file:
+          type: string
+          description: Set only when the finding came from a named file (e.g. a pushed bundle).
+        elementPath:
+          type: string
+          description: Locator within the document, e.g. `data-uri[0]:/svg/rect[1]`.
+        primitives:
+          type: array
+          minItems: 1
+          items: { type: string }
+          description: The offending filter primitives or mask conditions, e.g. `feGaussianBlur`.
+        reason:
+          type: string
+          enum: [unsupported, external-resource, too-large]
     DocType:
       type: object
       additionalProperties: false
@@ -609,6 +660,7 @@ components:
           page_format,
           sample_payload,
           catalog_version,
+          content_prompt,
           free_tier
         ]
       properties:
@@ -634,6 +686,13 @@ components:
           items: { type: string }
         page_format: { $ref: '#/components/schemas/PageFormat' }
         sample_payload: { $ref: '#/components/schemas/SamplePayload' }
+        content_prompt:
+          type: [string, 'null']
+          description: >-
+            The template author's content rules — e.g. "invoice totals exclude
+            VAT". Advisory, never enforced: render does not validate content
+            against it. Honour it when generating content for this template.
+            Null when the template declares none.
     RenderRequest:
       type: object
       additionalProperties: false
@@ -847,7 +906,8 @@ components:
       properties:
         id: { $ref: '#/components/schemas/TemplateId' }
         slug: { type: string }
-        created: { type: boolean, description: true on first push of the slug; false on replace-in-place. }
+        created:
+          { type: boolean, description: true on first push of the slug; false on replace-in-place. }
         updated_at: { type: string }
     CustomTemplateCard:
       type: object

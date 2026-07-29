@@ -59,7 +59,7 @@ kursiva render quote.md --template <template-id> \
 | `kursiva signup verify <email> <code>` | Redeem the code; prints and stores the key. |
 | `kursiva doctypes` | List document types and their template counts. |
 | `kursiva templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
-| `kursiva templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample). |
+| `kursiva templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample, the author's content rules). |
 | `kursiva render <file.md> --template <id> [flags]` | Render Markdown + fields to a PDF. |
 | `kursiva profile get \| set <file.json> \| clear` | Stored brand identity, applied to every render (Lite+). |
 | `kursiva assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (Lite+). |

@@ -14,7 +14,7 @@ export const EXIT = {
   AUTH: 2,
   /** 429 — per-key rate limit or monthly quota exhausted. */
   QUOTA: 3,
-  /** 400 — invalid request, unknown theme token, or page-cap exceeded. */
+  /** 400/422 — invalid request, unknown theme token, page-cap exceeded, or permanent-for-this-body (unrenderable_svg, idempotency_mismatch); fix the request, never retry it unchanged. */
   BAD_REQUEST: 4,
   /** 404 — unknown template id. */
   NOT_FOUND: 5,
@@ -35,6 +35,7 @@ export function exitCodeForStatus(status: number): number {
     case 429:
       return EXIT.QUOTA
     case 400:
+    case 422:
       return EXIT.BAD_REQUEST
     case 404:
       return EXIT.NOT_FOUND

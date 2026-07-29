@@ -67,6 +67,8 @@ export interface TemplateContract {
   catalog_version: string
   /** Renderable on the free tier; false ⇒ render requires lite or higher. */
   free_tier: boolean
+  /** The template author's content rules — advisory, never enforced by render; honour them when generating content. */
+  content_prompt: string | null
 }
 
 export interface RenderContent {
@@ -143,6 +145,17 @@ export interface SignupKeyResponse {
   rotated: boolean
 }
 
+/** One SVG region the render cannot reproduce — carried by `unrenderable_svg` (422). */
+export interface FilterFinding {
+  /** Set only when the finding came from a named file (e.g. a pushed bundle). */
+  file?: string
+  /** Locator within the document, e.g. `data-uri[0]:/svg/rect[1]`. */
+  elementPath: string
+  /** The offending filter primitives or mask conditions, e.g. `feGaussianBlur`. */
+  primitives: string[]
+  reason: 'unsupported' | 'external-resource' | 'too-large'
+}
+
 /** The structured error envelope every non-2xx response carries. */
 export interface ApiErrorBody {
   error: {
@@ -158,4 +171,5 @@ export interface ApiErrorBody {
   period?: string
   limit?: number
   limit_bytes?: number
+  findings?: FilterFinding[]
 }

@@ -1,6 +1,6 @@
 /**
- * `kursiva profile get|set|clear` — the stored brand profile (Lite+). `set`
- * reads a JSON file nested by profile group (see `kursiva doctypes` for each
+ * `skrivelo profile get|set|clear` — the stored brand profile (Lite+). `set`
+ * reads a JSON file nested by profile group (see `skrivelo doctypes` for each
  * type's profile_group and field keys); the server applies it to every render.
  */
 
@@ -13,9 +13,9 @@ import type { ParsedArgs } from '../args.js'
 import type { BrandProfile } from '../types.js'
 
 const USAGE = `Usage:
-  kursiva profile get                 show the stored brand profile
-  kursiva profile set <profile.json>  replace it (applied to every render)
-  kursiva profile clear               delete it — renders return to the neutral identity`
+  skrivelo profile get                 show the stored brand profile
+  skrivelo profile set <profile.json>  replace it (applied to every render)
+  skrivelo profile clear               delete it — renders return to the neutral identity`
 
 export function readProfileFile(path: string): BrandProfile {
   let text: string

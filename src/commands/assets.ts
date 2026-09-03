@@ -1,5 +1,5 @@
 /**
- * `kursiva assets list|upload|rm` — durable per-account images (Lite+). Upload
+ * `skrivelo assets list|upload|rm` — durable per-account images (Lite+). Upload
  * a logo once, reference its `img_…` id from the profile or image fields; the
  * server resizes and inlines it at render.
  */
@@ -12,9 +12,9 @@ import type { ApiClient } from '../client.js'
 import type { ParsedArgs } from '../args.js'
 
 const USAGE = `Usage:
-  kursiva assets list                 list uploaded assets and their img_… ids
-  kursiva assets upload <image>       upload an image (png/jpeg/webp/gif) — prints its img_… id
-  kursiva assets rm <img_id>          delete an asset`
+  skrivelo assets list                 list uploaded assets and their img_… ids
+  skrivelo assets upload <image>       upload an image (png/jpeg/webp/gif) — prints its img_… id
+  skrivelo assets rm <img_id>          delete an asset`
 
 export async function assetsCommand(
   parsed: ParsedArgs,
@@ -30,7 +30,7 @@ export async function assetsCommand(
       return EXIT.OK
     }
     if (res.assets.length === 0) {
-      console.log('No assets uploaded. `kursiva assets upload <image>` stores one.')
+      console.log('No assets uploaded. `skrivelo assets upload <image>` stores one.')
       return EXIT.OK
     }
     for (const a of res.assets) {

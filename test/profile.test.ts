@@ -12,7 +12,7 @@ import type { BrandProfile } from '../src/types.js'
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'kursiva-cli-profile-'))
+  dir = mkdtempSync(join(tmpdir(), 'skrivelo-cli-profile-'))
 })
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true })

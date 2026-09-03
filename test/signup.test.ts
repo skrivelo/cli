@@ -29,9 +29,9 @@ let logs: string[]
 let errs: string[]
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'kursiva-signup-'))
+  dir = mkdtempSync(join(tmpdir(), 'skrivelo-signup-'))
   vi.stubEnv('XDG_CONFIG_HOME', dir)
-  vi.stubEnv('KURSIVA_API_KEY', '')
+  vi.stubEnv('SKRIVELO_API_KEY', '')
   logs = []
   errs = []
   vi.spyOn(console, 'log').mockImplementation((m) => logs.push(String(m)))
@@ -46,10 +46,10 @@ afterEach(() => {
 })
 
 function configPath(): string {
-  return join(dir, 'kursiva', 'config.json')
+  return join(dir, 'skrivelo', 'config.json')
 }
 
-describe('kursiva signup', () => {
+describe('skrivelo signup', () => {
   it('POSTs the email without a bearer header and points at the verify step', async () => {
     const fetchMock = vi.fn<FetchLike>(async () =>
       jsonResponse({ status: 'verification_sent' }, 202)
@@ -62,7 +62,7 @@ describe('kursiva signup', () => {
     expect(url).toContain('/signup')
     expect(JSON.parse(init.body as string)).toEqual({ email: 'a@b.co' })
     expect((init.headers as Record<string, string>).authorization).toBeUndefined()
-    expect(logs.join('\n')).toContain('kursiva signup verify a@b.co')
+    expect(logs.join('\n')).toContain('skrivelo signup verify a@b.co')
   })
 
   it('verify mints, prints, and stores the key with 0600', async () => {
@@ -81,7 +81,7 @@ describe('kursiva signup', () => {
   })
 
   it('verify merges into an existing config, preserving apiUrl', async () => {
-    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    mkdirSync(join(dir, 'skrivelo'), { recursive: true })
     writeFileSync(configPath(), JSON.stringify({ apiUrl: 'http://api.test/v1' }))
     vi.stubGlobal(
       'fetch',
@@ -94,7 +94,7 @@ describe('kursiva signup', () => {
   })
 
   it('verify keeps a different stored key that the API still accepts', async () => {
-    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    mkdirSync(join(dir, 'skrivelo'), { recursive: true })
     writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_precious' }))
     const fetchMock = vi.fn<FetchLike>(async (url) =>
       String(url).includes('/doctypes')
@@ -116,7 +116,7 @@ describe('kursiva signup', () => {
   })
 
   it('verify replaces a stored key the API rejects (rotated away)', async () => {
-    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    mkdirSync(join(dir, 'skrivelo'), { recursive: true })
     writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_stale' }))
     vi.stubGlobal(
       'fetch',
@@ -135,7 +135,7 @@ describe('kursiva signup', () => {
   })
 
   it('a probe network failure never clobbers the stored key', async () => {
-    mkdirSync(join(dir, 'kursiva'), { recursive: true })
+    mkdirSync(join(dir, 'skrivelo'), { recursive: true })
     writeFileSync(configPath(), JSON.stringify({ apiKey: 'krsv_precious' }))
     vi.stubGlobal(
       'fetch',
@@ -188,7 +188,7 @@ describe('requireApiKey', () => {
       expect.unreachable()
     } catch (err) {
       expect(err).toBeInstanceOf(CliError)
-      expect((err as CliError).message).toContain('kursiva signup')
+      expect((err as CliError).message).toContain('skrivelo signup')
     }
   })
 })

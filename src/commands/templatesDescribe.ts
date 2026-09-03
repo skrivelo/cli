@@ -10,7 +10,7 @@ export async function templatesDescribeCommand(
 ): Promise<number> {
   // positionals: ['templates', 'describe', <id>]
   const id = parsed.positionals[2]
-  if (!id) throw new CliError('Usage: kursiva templates describe <id>')
+  if (!id) throw new CliError('Usage: skrivelo templates describe <id>')
 
   const c = await client.describe(id)
   if (json) {

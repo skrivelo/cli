@@ -12,7 +12,7 @@ import type { RenderRequest, RenderResponse } from '../src/types.js'
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'kursiva-cli-'))
+  dir = mkdtempSync(join(tmpdir(), 'skrivelo-cli-'))
 })
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true })

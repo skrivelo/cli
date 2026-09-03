@@ -16,7 +16,7 @@ export async function renderCommand(
 ): Promise<number> {
   // positionals: ['render', <file.md>]
   const file = parsed.positionals[1]
-  if (!file) throw new CliError('Usage: kursiva render <file.md> --template <id> [options]')
+  if (!file) throw new CliError('Usage: skrivelo render <file.md> --template <id> [options]')
 
   const templateId = parsed.options['--template']
   if (!templateId) throw new CliError('Missing --template <id>.')

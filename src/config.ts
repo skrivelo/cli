@@ -1,7 +1,7 @@
 /**
  * Resolve the API key and base URL. Precedence: CLI flag → environment →
- * `~/.config/kursiva/config.json`. Point the client at another host with
- * `KURSIVA_API_URL` (or `--api-url`).
+ * `~/.config/skrivelo/config.json`. Point the client at another host with
+ * `SKRIVELO_API_URL` (or `--api-url`).
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path'
 import { CliError, EXIT } from './errors.js'
 import type { ParsedArgs } from './args.js'
 
-export const DEFAULT_BASE_URL = 'https://api.kursiva.com/v1'
+export const DEFAULT_BASE_URL = 'https://api.skrivelo.com/v1'
 
 export interface CliConfig {
   apiKey?: string
@@ -20,7 +20,7 @@ export interface CliConfig {
 
 export function configFilePath(): string {
   const base = process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
-  return join(base, 'kursiva', 'config.json')
+  return join(base, 'skrivelo', 'config.json')
 }
 
 function readConfigFile(): Record<string, unknown> {
@@ -51,10 +51,10 @@ export function loadConfig(parsed: ParsedArgs): CliConfig {
   const file = readConfigFile()
   const fileApiKey = typeof file.apiKey === 'string' ? file.apiKey : undefined
   const fileApiUrl = typeof file.apiUrl === 'string' ? file.apiUrl : undefined
-  const apiKey = parsed.options['--api-key'] || process.env.KURSIVA_API_KEY || fileApiKey
+  const apiKey = parsed.options['--api-key'] || process.env.SKRIVELO_API_KEY || fileApiKey
   const baseUrl = (
     parsed.options['--api-url'] ||
-    process.env.KURSIVA_API_URL ||
+    process.env.SKRIVELO_API_URL ||
     fileApiUrl ||
     DEFAULT_BASE_URL
   ).replace(/\/+$/, '')
@@ -71,9 +71,9 @@ export function loadConfig(parsed: ParsedArgs): CliConfig {
 export function requireApiKey(config: CliConfig): string {
   if (!config.apiKey) {
     throw new CliError(
-      'No API key. Get a free one: `kursiva signup you@example.com` emails a code, ' +
-        'then `kursiva signup verify you@example.com <code>` issues and stores the key. ' +
-        'Or set KURSIVA_API_KEY, pass --api-key, or add it to ~/.config/kursiva/config.json.',
+      'No API key. Get a free one: `skrivelo signup you@example.com` emails a code, ' +
+        'then `skrivelo signup verify you@example.com <code>` issues and stores the key. ' +
+        'Or set SKRIVELO_API_KEY, pass --api-key, or add it to ~/.config/skrivelo/config.json.',
       { exitCode: EXIT.AUTH, code: 'no_api_key' }
     )
   }

@@ -22,7 +22,7 @@ export async function signupCommand(
   const [, first, ...rest] = parsed.positionals
   if (first === 'verify') return verify(rest, client, json)
   if (!first || rest.length > 0) {
-    throw new CliError('Usage: kursiva signup <email> | kursiva signup verify <email> <code>')
+    throw new CliError('Usage: skrivelo signup <email> | skrivelo signup verify <email> <code>')
   }
 
   const accepted = await client.signup(first)
@@ -30,7 +30,7 @@ export async function signupCommand(
     printJson(accepted)
   } else {
     console.log(`If eligible, a verification code was emailed to ${first}.`)
-    console.log(`Next: kursiva signup verify ${first} <code>`)
+    console.log(`Next: skrivelo signup verify ${first} <code>`)
   }
   return EXIT.OK
 }
@@ -38,7 +38,7 @@ export async function signupCommand(
 async function verify(rest: string[], client: ApiClient, json: boolean): Promise<number> {
   const [email, code, ...extra] = rest
   if (!email || !code || extra.length > 0) {
-    throw new CliError('Usage: kursiva signup verify <email> <code>')
+    throw new CliError('Usage: skrivelo signup verify <email> <code>')
   }
 
   const minted = await client.verifySignup(email, code)

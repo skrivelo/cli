@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * [<]kursiva CLI — executable entry. Wires argv → `main` → process exit code.
+ * [<]skrivelo CLI — executable entry. Wires argv → `main` → process exit code.
  */
 
 import { main } from './main.js'

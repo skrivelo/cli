@@ -1,5 +1,5 @@
 /**
- * TypeScript mirror of the [<]kursiva Render API contract (`contract/openapi.yaml`).
+ * TypeScript mirror of the [<]skrivelo Render API contract (`contract/openapi.yaml`).
  * These are the response and request shapes the CLI reads and writes; the
  * vendored OpenAPI spec is the source of truth (see `test/contract.test.ts`).
  */

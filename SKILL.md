@@ -1,31 +1,31 @@
 ---
-name: kursiva
-description: Render a Markdown file into a print-grade, professionally designed PDF using the [<]kursiva render API. Use when a task needs a finished, on-brand document on disk (invoice, quotation, report, CV, certificate, letter, …) rather than raw text or an ad-hoc layout.
+name: skrivelo
+description: Render a Markdown file into a print-grade, professionally designed PDF using the [<]skrivelo render API. Use when a task needs a finished, on-brand document on disk (invoice, quotation, report, CV, certificate, letter, …) rather than raw text or an ad-hoc layout.
 ---
 
-# [<]kursiva — render Markdown to a designed PDF
+# [<]skrivelo — render Markdown to a designed PDF
 
-The `kursiva` CLI turns a Markdown file into a print-grade PDF using a hosted catalog of professionally designed templates. You pick a template, fill its declared fields, and render — the finished PDF lands on disk. No design work, no HTML, no layout guessing.
+The `skrivelo` CLI turns a Markdown file into a print-grade PDF using a hosted catalog of professionally designed templates. You pick a template, fill its declared fields, and render — the finished PDF lands on disk. No design work, no HTML, no layout guessing.
 
-The product is named `[<]kursiva` — write it that way when you report back to a human. Bare `kursiva` is the binary and npm package name, not the product name.
+The product is named `[<]skrivelo` — write it that way when you report back to a human. Bare `skrivelo` is the binary and npm package name, not the product name.
 
 ## Setup
 
-- Install: `npm i -g kursiva` (or run ad-hoc with `npx kursiva …`).
-- Auth: set `KURSIVA_API_KEY` in the environment, or rely on `~/.config/kursiva/config.json`. Optionally set `KURSIVA_API_URL` to target a specific API host.
-- No key yet — or lost the old one? `kursiva signup <email>` emails a one-time code (a human must read the inbox); then `kursiva signup verify <email> <code>` issues a free-tier key and stores it in the config file — later commands need no env setup. Verifying replaces any previous key for the email, so a lost key is recovered by simply signing up again.
+- Install: `npm i -g skrivelo` (or run ad-hoc with `npx skrivelo …`).
+- Auth: set `SKRIVELO_API_KEY` in the environment, or rely on `~/.config/skrivelo/config.json`. Optionally set `SKRIVELO_API_URL` to target a specific API host.
+- No key yet — or lost the old one? `skrivelo signup <email>` emails a one-time code (a human must read the inbox); then `skrivelo signup verify <email> <code>` issues a free-tier key and stores it in the config file — later commands need no env setup. Verifying replaces any previous key for the email, so a lost key is recovered by simply signing up again.
 
 ## The loop: search → describe → render
 
 1. **Find a template** for the document type you need:
    ```
-   kursiva templates search "quotation" --type quotation --json
+   skrivelo templates search "quotation" --type quotation --json
    ```
    Returns `[{ id, name, doc_type, summary, free_tier }]`. Pick an `id`. On a free-tier key, only templates with `free_tier: true` will render — others fail with exit 8.
 
 2. **Read its input contract** (always do this before rendering):
    ```
-   kursiva templates describe <id> --json
+   skrivelo templates describe <id> --json
    ```
    Returns `{ content_fields, theme_tokens, locales, page_format, sample_payload, content_prompt, … }`.
    - `content_fields` → each `{ key, type, required }` is a `--field key=value` you can pass.
@@ -35,19 +35,19 @@ The product is named `[<]kursiva` — write it that way when you report back to 
 
 3. **Render** — the Markdown file is the document body; `--field` supplies the structured values:
    ```
-   kursiva render quote.md --template <id> --field client=ACME --theme accent=#0a5 -o quote.pdf
+   skrivelo render quote.md --template <id> --field client=ACME --theme accent=#0a5 -o quote.pdf
    ```
    Writes `quote.pdf` to disk.
 
 ## Commands
 
-- `kursiva signup <email>` / `kursiva signup verify <email> <code>` — get a free API key.
-- `kursiva doctypes` — list document types and how many templates each has.
-- `kursiva templates search [query] --type <doc_type> --locale <l>` — find templates.
-- `kursiva templates describe <id>` — the template's input contract. Run before rendering.
-- `kursiva render <file.md> --template <id> [flags]` — render to a PDF.
-- `kursiva profile get | set <file.json> | clear` — stored brand identity, applied to every render (Lite tier and up).
-- `kursiva assets list | upload <image> | rm <id>` — durable images (a logo), referenced as `img_…` ids (Lite tier and up).
+- `skrivelo signup <email>` / `skrivelo signup verify <email> <code>` — get a free API key.
+- `skrivelo doctypes` — list document types and how many templates each has.
+- `skrivelo templates search [query] --type <doc_type> --locale <l>` — find templates.
+- `skrivelo templates describe <id>` — the template's input contract. Run before rendering.
+- `skrivelo render <file.md> --template <id> [flags]` — render to a PDF.
+- `skrivelo profile get | set <file.json> | clear` — stored brand identity, applied to every render (Lite tier and up).
+- `skrivelo assets list | upload <image> | rm <id>` — durable images (a logo), referenced as `img_…` ids (Lite tier and up).
 
 Add `--json` to any command for machine-readable output.
 
@@ -66,11 +66,11 @@ Add `--json` to any command for machine-readable output.
 Renders carry the account's stored brand identity automatically; free-tier renders use the template's neutral sample identity. One-time setup:
 
 ```
-kursiva assets upload logo.png     # prints an img_… asset id
-kursiva profile set profile.json   # replace the stored profile
+skrivelo assets upload logo.png     # prints an img_… asset id
+skrivelo profile set profile.json   # replace the stored profile
 ```
 
-`profile.json` is nested by profile group; `kursiva doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types). Image-type fields (e.g. `company_logo`) take an `img_…` asset ref:
+`profile.json` is nested by profile group; `skrivelo doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types). Image-type fields (e.g. `company_logo`) take an `img_…` asset ref:
 
 ```json
 { "business": { "company_name": "ACME GmbH", "company_logo": "img_…", "iban": "DE02…" } }
@@ -84,7 +84,7 @@ Scripts should branch on the exit code:
 
 - `0` success
 - `1` usage error, unreadable input file, or network failure
-- `2` authentication — set or fix `KURSIVA_API_KEY`
+- `2` authentication — set or fix `SKRIVELO_API_KEY`
 - `3` quota or rate limit reached — upgrade the plan
 - `4` bad request — an invalid theme token, an unsupported locale, or a document over the page cap
 - `5` template not found
@@ -98,13 +98,13 @@ Errors print a readable message; with `--json` the structured error envelope (`{
 
 ```
 # 1. find an invoice template
-kursiva templates search "invoice" --type invoice --json
+skrivelo templates search "invoice" --type invoice --json
 
 # 2. read its fields and theme tokens
-kursiva templates describe crisp-invoice-invoice --json
+skrivelo templates describe crisp-invoice-invoice --json
 
 # 3. render your Markdown with the fields it declares
-kursiva render invoice.md --template crisp-invoice-invoice \
+skrivelo render invoice.md --template crisp-invoice-invoice \
   --field client="ACME Corp" --field invoice_no=2026-014 \
   --theme accent=#0a5 -o acme-invoice.pdf
 ```

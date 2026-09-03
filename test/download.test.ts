@@ -9,11 +9,11 @@ import { CliError } from '../src/errors.js'
 type FetchLike = (url: unknown, init: RequestInit) => Promise<unknown>
 
 const LOCAL = 'http://127.0.0.1:8787/v1'
-const REMOTE = 'https://api.kursiva.com/v1'
+const REMOTE = 'https://api.skrivelo.com/v1'
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'kursiva-dl-'))
+  dir = mkdtempSync(join(tmpdir(), 'skrivelo-dl-'))
 })
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true })

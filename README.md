@@ -1,11 +1,11 @@
-# [<]kursiva
+# [<]skrivelo
 
 **Turn Markdown into a print-grade, professionally designed PDF — from any shell.**
 
-`kursiva` is a small command-line client for the [<]kursiva render API. Point it at a Markdown file, pick a template from a hosted catalog of professionally designed documents, and get a finished PDF on disk. No design skills, no HTML, no headless browser — the rendering happens server-side.
+`skrivelo` is a small command-line client for the [<]skrivelo render API. Point it at a Markdown file, pick a template from a hosted catalog of professionally designed documents, and get a finished PDF on disk. No design skills, no HTML, no headless browser — the rendering happens server-side.
 
 ```
-markdown in  →  kursiva render  →  polished PDF out
+markdown in  →  skrivelo render  →  polished PDF out
 ```
 
 It is built for agents and scripts: every command speaks `--json`, exit codes are distinct and stable, and the whole surface is documented for skill-reading agents in [`SKILL.md`](./SKILL.md).
@@ -13,9 +13,9 @@ It is built for agents and scripts: every command speaks `--json`, exit codes ar
 ## Install
 
 ```
-npm install -g kursiva
+npm install -g skrivelo
 # or, ad-hoc:
-npx kursiva --help
+npx skrivelo --help
 ```
 
 Requires Node.js 20+.
@@ -25,27 +25,27 @@ Requires Node.js 20+.
 Self-signup is built in — free tier, no card, no account form:
 
 ```
-kursiva signup you@example.com          # emails you a one-time code
-kursiva signup verify you@example.com <code>
+skrivelo signup you@example.com          # emails you a one-time code
+skrivelo signup verify you@example.com <code>
 ```
 
-`verify` prints the key (the API shows it exactly once) and stores it in `~/.config/kursiva/config.json`, so every later command just works. One key per email — and losing it is fine: run the same two commands again and verifying issues a fresh key, revoking the old one.
+`verify` prints the key (the API shows it exactly once) and stores it in `~/.config/skrivelo/config.json`, so every later command just works. One key per email — and losing it is fine: run the same two commands again and verifying issues a fresh key, revoking the old one.
 
 ## Authentication
 
-Commands read the key from (in precedence order) the `--api-key` flag → `KURSIVA_API_KEY` → `~/.config/kursiva/config.json` (`{ "apiKey": "krsv_..." }`). Point the client at a specific host with `KURSIVA_API_URL` or `--api-url`.
+Commands read the key from (in precedence order) the `--api-key` flag → `SKRIVELO_API_KEY` → `~/.config/skrivelo/config.json` (`{ "apiKey": "krsv_..." }`). Point the client at a specific host with `SKRIVELO_API_URL` or `--api-url`.
 
 ## Quickstart
 
 ```
 # 1. discover a template
-kursiva templates search "quotation" --type quotation
+skrivelo templates search "quotation" --type quotation
 
 # 2. read what it accepts
-kursiva templates describe <template-id>
+skrivelo templates describe <template-id>
 
 # 3. render your Markdown into a PDF
-kursiva render quote.md --template <template-id> \
+skrivelo render quote.md --template <template-id> \
   --field client="ACME Corp" --theme accent=#0a5 -o quote.pdf
 ```
 
@@ -55,14 +55,14 @@ kursiva render quote.md --template <template-id> \
 
 | Command | Description |
 | --- | --- |
-| `kursiva signup <email>` | Request a free API key — emails a one-time code. |
-| `kursiva signup verify <email> <code>` | Redeem the code; prints and stores the key. |
-| `kursiva doctypes` | List document types and their template counts. |
-| `kursiva templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
-| `kursiva templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample, the author's content rules). |
-| `kursiva render <file.md> --template <id> [flags]` | Render Markdown + fields to a PDF. |
-| `kursiva profile get \| set <file.json> \| clear` | Stored brand identity, applied to every render (Lite+). |
-| `kursiva assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (Lite+). |
+| `skrivelo signup <email>` | Request a free API key — emails a one-time code. |
+| `skrivelo signup verify <email> <code>` | Redeem the code; prints and stores the key. |
+| `skrivelo doctypes` | List document types and their template counts. |
+| `skrivelo templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
+| `skrivelo templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample, the author's content rules). |
+| `skrivelo render <file.md> --template <id> [flags]` | Render Markdown + fields to a PDF. |
+| `skrivelo profile get \| set <file.json> \| clear` | Stored brand identity, applied to every render (Lite+). |
+| `skrivelo assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (Lite+). |
 
 Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 
@@ -83,11 +83,11 @@ Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 Store your identity once and every render carries it; free-tier renders use each template's neutral brand bundle.
 
 ```bash
-kursiva assets upload logo.png     # → img_… asset id
-kursiva profile set profile.json   # applied to every subsequent render
+skrivelo assets upload logo.png     # → img_… asset id
+skrivelo profile set profile.json   # applied to every subsequent render
 ```
 
-`profile.json` is nested by *profile group* — `kursiva doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types):
+`profile.json` is nested by *profile group* — `skrivelo doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types):
 
 ```json
 { "business": { "company_name": "ACME GmbH", "company_logo": "img_…", "iban": "DE02…" } }

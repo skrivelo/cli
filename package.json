@@ -1,10 +1,10 @@
 {
-  "name": "kursiva",
+  "name": "skrivelo",
   "version": "0.2.0",
-  "description": "Command-line client for the [<]kursiva render API — turn Markdown into print-grade PDFs from any shell.",
+  "description": "Command-line client for the [<]skrivelo render API — turn Markdown into print-grade PDFs from any shell.",
   "type": "module",
   "bin": {
-    "kursiva": "dist/index.js"
+    "skrivelo": "dist/index.js"
   },
   "files": [
     "dist",
@@ -19,11 +19,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kursiva-cli/kursiva.git"
+    "url": "git+https://github.com/skrivelo/cli.git"
   },
-  "homepage": "https://github.com/kursiva-cli/kursiva#readme",
+  "homepage": "https://github.com/skrivelo/cli#readme",
   "bugs": {
-    "url": "https://github.com/kursiva-cli/kursiva/issues"
+    "url": "https://github.com/skrivelo/cli/issues"
   },
   "keywords": [
     "pdf",

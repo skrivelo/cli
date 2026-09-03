@@ -115,58 +115,58 @@ function readVersion(): string {
     const pkg = JSON.parse(
       readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf-8')
     )
-    return `kursiva ${pkg.version}`
+    return `skrivelo ${pkg.version}`
   } catch {
-    return 'kursiva (unknown version)'
+    return 'skrivelo (unknown version)'
   }
 }
 
 function usage(command?: string): string {
   if (command === 'signup') {
     return `Usage:
-  kursiva signup <email>                  request a free key — emails a one-time code
-  kursiva signup verify <email> <code>    redeem the code; the key is issued once and stored`
+  skrivelo signup <email>                  request a free key — emails a one-time code
+  skrivelo signup verify <email> <code>    redeem the code; the key is issued once and stored`
   }
   if (command === 'templates') {
     return `Usage:
-  kursiva templates search [query] [--type <doc_type>] [--locale <l>] [--json]
-  kursiva templates describe <id> [--json]`
+  skrivelo templates search [query] [--type <doc_type>] [--locale <l>] [--json]
+  skrivelo templates describe <id> [--json]`
   }
   if (command === 'render') {
     return `Usage:
-  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--locale <l>] [--profile <file.json>] [-o out.pdf] [--timeout <s>] [--json]`
+  skrivelo render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--locale <l>] [--profile <file.json>] [-o out.pdf] [--timeout <s>] [--json]`
   }
   if (command === 'profile') {
     return `Usage:
-  kursiva profile get                 show the stored brand profile (Lite+)
-  kursiva profile set <profile.json>  replace it — applied to every render
-  kursiva profile clear               delete it — renders return to the neutral identity
+  skrivelo profile get                 show the stored brand profile (Lite+)
+  skrivelo profile set <profile.json>  replace it — applied to every render
+  skrivelo profile clear               delete it — renders return to the neutral identity
 
-profile.json is nested by profile group (see \`kursiva doctypes\` for each
+profile.json is nested by profile group (see \`skrivelo doctypes\` for each
 type's profile_group and field keys), e.g.
   {"business": {"company_name": "ACME GmbH", "company_logo": "img_…"}}`
   }
   if (command === 'assets') {
     return `Usage:
-  kursiva assets list                 list uploaded assets and their img_… ids (Lite+)
-  kursiva assets upload <image>       upload an image — prints its img_… id
-  kursiva assets rm <img_id>          delete an asset`
+  skrivelo assets list                 list uploaded assets and their img_… ids (Lite+)
+  skrivelo assets upload <image>       upload an image — prints its img_… id
+  skrivelo assets rm <img_id>          delete an asset`
   }
-  return `[<]kursiva — command-line client for the render API
+  return `[<]skrivelo — command-line client for the render API
 
 Usage:
-  kursiva signup <email>                  get a free API key (emails a one-time code)
-  kursiva signup verify <email> <code>
-  kursiva doctypes [--json]
-  kursiva templates search [query] [--type <doc_type>] [--locale <l>] [--json]
-  kursiva templates describe <id> [--json]
-  kursiva render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--profile <file.json>] [-o out.pdf] [--json]
-  kursiva profile get|set <file.json>|clear   stored brand identity (Lite+)
-  kursiva assets list|upload <image>|rm <id>  durable images, e.g. your logo (Lite+)
+  skrivelo signup <email>                  get a free API key (emails a one-time code)
+  skrivelo signup verify <email> <code>
+  skrivelo doctypes [--json]
+  skrivelo templates search [query] [--type <doc_type>] [--locale <l>] [--json]
+  skrivelo templates describe <id> [--json]
+  skrivelo render <file.md> --template <id> [--field k=v ...] [--theme k=v ...] [--profile <file.json>] [-o out.pdf] [--json]
+  skrivelo profile get|set <file.json>|clear   stored brand identity (Lite+)
+  skrivelo assets list|upload <image>|rm <id>  durable images, e.g. your logo (Lite+)
 
 Auth:
-  Set KURSIVA_API_KEY (or --api-key), and optionally KURSIVA_API_URL (or --api-url).
-  No key yet? \`kursiva signup <email>\` issues a free-tier key — no card, no account form.
+  Set SKRIVELO_API_KEY (or --api-key), and optionally SKRIVELO_API_URL (or --api-url).
+  No key yet? \`skrivelo signup <email>\` issues a free-tier key — no card, no account form.
 
 Global flags:
   --json       machine-readable output on every command

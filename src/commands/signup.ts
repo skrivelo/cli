@@ -25,7 +25,30 @@ export async function signupCommand(
     throw new CliError('Usage: skrivelo signup <email> | skrivelo signup verify <email> <code>')
   }
 
-  const accepted = await client.signup(first)
+  const version = parsed.options['--accept-terms-version']
+  const adult = parsed.flags.has('--adult')
+  const language = parsed.options['--locale'] === 'de' ? 'de' : 'en'
+  const termsUrl = `https://app.skrivelo.com/web/legal/api-terms?lang=${language}`
+  if (version && !adult)
+    throw new CliError(
+      `Confirm you are 18 or older with --adult. Review the API terms at ${termsUrl} before accepting their exact version.`
+    )
+  if (!version && !json)
+    console.log(
+      `Existing-key recovery only. New accounts require --accept-terms-version <published-version> --adult after reviewing ${termsUrl}. Draft terms cannot be accepted.`
+    )
+  const accepted = await client.signup(
+    first,
+    version
+      ? {
+          termsAccepted: true,
+          adultConfirmed: adult,
+          version,
+          language,
+          product: 'api'
+        }
+      : undefined
+  )
   if (json) {
     printJson(accepted)
   } else {

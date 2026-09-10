@@ -50,6 +50,38 @@ function configPath(): string {
 }
 
 describe('skrivelo signup', () => {
+  it('sends explicit adult confirmation and the chosen API contract version', async () => {
+    const fetchMock = vi.fn<FetchLike>(async () =>
+      jsonResponse({ status: 'verification_sent' }, 202)
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    expect(
+      await main([
+        'signup',
+        'a@b.co',
+        '--accept-terms-version',
+        'test-version',
+        '--adult',
+        '--locale',
+        'de'
+      ])
+    ).toBe(0)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      legalAcceptance: {
+        termsAccepted: true,
+        adultConfirmed: true,
+        version: 'test-version',
+        language: 'de',
+        product: 'api'
+      }
+    })
+  })
+  it('does not infer adult confirmation from a version argument', async () => {
+    const fetchMock = vi.fn<FetchLike>()
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await main(['signup', 'a@b.co', '--accept-terms-version', 'test-version'])).not.toBe(0)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
   it('POSTs the email without a bearer header and points at the verify step', async () => {
     const fetchMock = vi.fn<FetchLike>(async () =>
       jsonResponse({ status: 'verification_sent' }, 202)

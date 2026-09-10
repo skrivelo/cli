@@ -95,8 +95,20 @@ export class ApiClient {
     return this.request<DeleteResponse>('DELETE', `/assets/${encodeURIComponent(assetId)}`)
   }
 
-  signup(email: string): Promise<SignupAccepted> {
-    return this.request<SignupAccepted>('POST', '/signup', { email })
+  signup(
+    email: string,
+    legalAcceptance?: {
+      termsAccepted: boolean
+      adultConfirmed: boolean
+      version: string
+      language: 'en' | 'de'
+      product: 'api'
+    }
+  ): Promise<SignupAccepted> {
+    return this.request<SignupAccepted>('POST', '/signup', {
+      email,
+      ...(legalAcceptance ? { legalAcceptance } : {})
+    })
   }
 
   verifySignup(email: string, code: string): Promise<SignupKeyResponse> {

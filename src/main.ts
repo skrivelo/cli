@@ -124,7 +124,9 @@ function readVersion(): string {
 function usage(command?: string): string {
   if (command === 'signup') {
     return `Usage:
-  skrivelo signup <email>                  request a free key — emails a one-time code
+  skrivelo signup <email> --accept-terms-version <version> --adult [--locale en|de]
+                                          request a new free key after reviewing published API terms
+  skrivelo signup <email>                  recover an existing key without accepting new terms
   skrivelo signup verify <email> <code>    redeem the code; the key is issued once and stored`
   }
   if (command === 'templates') {

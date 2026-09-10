@@ -25,10 +25,11 @@ const STRING_OPTS = new Set([
   '--profile',
   '--timeout',
   '--api-url',
-  '--api-key'
+  '--api-key',
+  '--accept-terms-version'
 ])
 const REPEATED_OPTS = new Set(['--field', '--theme'])
-const BOOL_FLAGS = new Set(['--json', '--help', '--version'])
+const BOOL_FLAGS = new Set(['--json', '--help', '--version', '--adult'])
 
 function canon(flag: string): string {
   return ALIASES[flag] ?? flag

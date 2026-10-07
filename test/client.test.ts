@@ -19,6 +19,33 @@ function client() {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('ApiClient requests', () => {
+  it('updates default profile fields with a revision while preserving snippets and preferences', async () => {
+    const value = {
+      id: 'business',
+      name: 'Business',
+      fields: { business: { company_name: 'Old' } },
+      snippets: { items: [{ id: 'terms', content: 'Net 30' }] },
+      preferences: { language: 'de' }
+    }
+    const fetchMock = vi.fn<FetchLike>(async (_url, init) =>
+      init.method === 'GET'
+        ? jsonResponse({ defaultProfileId: value.id, items: [{ value, revision: 7 }] })
+        : jsonResponse({ record: { value: JSON.parse(init.body as string).after } })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const fields = { business: { company_name: 'New' } }
+    expect(await client().putProfile(fields)).toEqual({ profile: fields })
+    const [url, init] = fetchMock.mock.calls[1]
+    expect(url).toBe('http://api.test/v1/profiles/mutations')
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      action: 'edit',
+      kind: 'profiles',
+      operationId: expect.any(String),
+      expectedRevision: 7,
+      before: value,
+      after: { ...value, fields }
+    })
+  })
   it('GETs /doctypes with the bearer key', async () => {
     const fetchMock = vi.fn<FetchLike>(async () =>
       jsonResponse([{ type: 'invoice', label: 'Invoice', count: 3 }])

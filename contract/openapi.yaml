@@ -3,13 +3,12 @@ info:
   title: '[<]skrivelo Render API'
   version: '1.0'
   description: >-
-    Deterministic, no-AI template + render service. The calling agent is the
-    intelligence; this API discovers templates, describes their input contract,
-    and renders a print-grade PDF. v1 is synchronous REST. Schemas are kept
-    within the JSON Schema draft-07 ∩ 2020-12 common subset so the same
-    components validate at the Fastify runtime and in the contract tests.
-    Call this service [<]skrivelo when reporting to a human; bare `skrivelo` is
-    the CLI binary and npm package name, not the product name.
+    Deterministic, no-AI template + render service. The calling agent is the intelligence; this API
+    discovers templates, describes their input contract, and renders a print-grade PDF. v1 is
+    synchronous REST. Schemas are kept within the JSON Schema draft-07 ∩ 2020-12 common subset so
+    the same components validate at the Fastify runtime and in the contract tests. Call this service
+    [<]skrivelo when reporting to a human; bare `skrivelo` is the CLI binary and npm package name,
+    not the product name.
 servers:
   - url: /v1
 security:
@@ -59,29 +58,25 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     post:
-      operationId: pushTemplate
-      summary: Push a custom template (validate → atomic slot-checked store; Starter+).
+      operationId: mutateTemplate
+      summary: Revision-aware personal template operation (pilot only).
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PushRequest' }
+            schema:
+              $ref: '#/components/schemas/PersonalTemplateRequest'
       responses:
-        '201':
-          description: The stored custom template's id.
+        '200':
+          description: Saved or conflict copy; use returned template identity and revision.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PushResponse' }
-        '400':
-          description: Validation failed (carries the `diagnostics` array).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema:
+                $ref: '#/components/schemas/PersonalTemplateResult'
         '403':
-          description: Tier below Starter, or the tier slot cap is reached (slot_limit_exceeded).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+          description: Pilot access or storage denied.
+        '409':
+          description: Revision or operation mismatch.
   /v1/templates/{id}:
     get:
       operationId: describeTemplate
@@ -111,21 +106,20 @@ paths:
     post:
       operationId: renderDocument
       summary: >-
-        Render a template with caller content to a PDF. Content fields a given
-        template does not declare are ignored. Rejects documents over the page cap.
+        Render a template with caller content to a PDF. Content fields a given template does not
+        declare are ignored. Rejects documents over the page cap.
       parameters:
         - name: Idempotency-Key
           in: header
           required: false
           description: >-
-            Opaque retry key (1–255 chars of [A-Za-z0-9._:-]). Repeating a value
-            for the same API key AND the same request body returns the original
-            result without re-rendering or re-billing; absent, every call is
-            metered independently. The stored result is bound to the request that
-            produced it, so reusing a key for a different body returns 422
-            idempotency_mismatch rather than the earlier document — mint a new key
-            per distinct request. `options` is ignored for this comparison. An
-            out-of-range value returns 400 invalid_request.
+            Opaque retry key (1–255 chars of [A-Za-z0-9._:-]). Repeating a value for the same API
+            key AND the same request body returns the original result without re-rendering or
+            re-billing; absent, every call is metered independently. The stored result is bound to
+            the request that produced it, so reusing a key for a different body returns 422
+            idempotency_mismatch rather than the earlier document — mint a new key per distinct
+            request. `options` is ignored for this comparison. An out-of-range value returns 400
+            invalid_request.
           schema:
             type: string
             pattern: '^[A-Za-z0-9._:-]{1,255}$'
@@ -142,8 +136,8 @@ paths:
               schema: { $ref: '#/components/schemas/RenderResponse' }
         '400':
           description: >-
-            Invalid request, unknown/invalid theme token, page cap exceeded, or too
-            many explicit page-break markers (too_many_page_breaks).
+            Invalid request, unknown/invalid theme token, page cap exceeded, or too many explicit
+            page-break markers (too_many_page_breaks).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -154,9 +148,9 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '403':
           description: >-
-            insufficient_tier — the template is not in the free-tier catalog
-            (`free_tier` on the template card marks the boundary), or the request
-            carries a `profile` on a key below lite.
+            insufficient_tier — the template is not in the free-tier catalog (`free_tier` on the
+            template card marks the boundary), or the request carries a `profile` on a key below
+            lite.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -167,8 +161,8 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '409':
           description: >-
-            A concurrent request already holds this Idempotency-Key
-            (idempotency_conflict); retry once it completes.
+            A concurrent request already holds this Idempotency-Key (idempotency_conflict); retry
+            once it completes.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -179,13 +173,16 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '422':
           description: >-
-            Permanent for this request as sent; do not retry it unchanged.
-            `idempotency_mismatch` — this Idempotency-Key was already used with a
-            different request body. `unrenderable_svg` — the content carries an
-            SVG construct WeasyPrint cannot reproduce (a `<filter>`, or one of
-            three mask conditions), so the PDF would not match what the content
-            describes; `findings` names the offending primitive per element.
-            Remove the filter or flatten the region to a raster.
+            Permanent for this request as sent; do not retry it unchanged. `idempotency_mismatch` —
+            this Idempotency-Key was already used with a different request body. `unrenderable_svg`
+            — the content carries an SVG dependency that cannot be prepared, such as CSS variables
+            in an unsupported embedding context; `findings` locates the problem. SVG filters and
+            masks are supported by the Chromium renderer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Renderer capacity is busy; retry after the Retry-After delay. No render quota is charged.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -202,7 +199,19 @@ paths:
   /v1/checkout:
     post:
       operationId: checkout
-      summary: Start a hosted Paddle checkout to upgrade the caller's key to a paid tier.
+      summary: Start or reuse a hosted checkout for the authenticated account's API subscription.
+      description: >-
+        All keys belonging to an account share its API subscription. One recurring checkout may be
+        outstanding at a time; the same selection reuses it and a different selection waits for
+        verified provider cancellation. Checkouts expire after 24 hours through provider
+        cancellation. Existing subscribers must use the preview-confirm change workflow. Paid launch
+        approval and current API terms are required. Unknown provider outcomes require
+        reconciliation; do not create a replacement purchase to retry them.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,128}$' }
       requestBody:
         required: true
         content:
@@ -226,6 +235,113 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '503':
           description: Billing/checkout temporarily unavailable (Paddle unreachable).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Current API terms have not been accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: An existing subscription, unresolved purchase, or account deletion prevents checkout.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/billing/subscription:
+    get:
+      operationId: getApiSubscription
+      summary: Read the authenticated account's API subscription and billing operations.
+      responses:
+        '200':
+          description: Account-owned billing state without provider identifiers. Never cache this response.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingSubscription' }
+        default:
+          description: Authentication failure or billing temporarily unavailable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/billing/change/preview:
+    post:
+      operationId: previewApiSubscriptionChange
+      summary: Preview an immediate prorated change to an existing paid API tier.
+      description: >-
+        The account and subscription are resolved from the authenticated key. Free transitions use
+        cancellation, not this endpoint. Returns a five-minute, account-bound, single-use preview.
+        No subscription is changed by previewing. Existing calendar-period usage is preserved. A
+        downgrade that reaches or exceeds the target quota blocks further renders until reset or
+        upgrade. Scheduled cancellation, pause, deletion and conflicting operations prevent changes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BillingChangeRequest' }
+      responses:
+        '200':
+          description: Estimated charge or credit, renewal and usage consequences. Never cache this response.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingChangePreview' }
+        default:
+          description:
+            Invalid selection, authentication or terms failure, conflicting state, or billing
+            unavailable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/billing/change:
+    post:
+      operationId: confirmApiSubscriptionChange
+      summary: Confirm a reviewed change to the same API subscription.
+      description: >-
+        Rechecks provider state and prices. Stale or expired previews require a new preview and
+        confirmation. Updates use prorated_immediately and prevent_change on payment failure. The
+        previous entitlement remains until verified; usage never resets. Repeating the same consumed
+        preview returns its operation. An uncertain provider result remains processing for
+        reconciliation rather than creating another subscription or issuing an automatic refund.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BillingChangeConfirmation' }
+      responses:
+        '200':
+          description: Durable operation status, which may still be processing. Never cache this response.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingOperation' }
+        default:
+          description: Invalid or expired preview, changed pricing, authentication or terms failure,
+            conflicting state, or billing unavailable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/billing/operations/{operationId}:
+    get:
+      operationId: getApiBillingOperation
+      summary: Read a billing operation belonging to the authenticated account.
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description:
+            Durable operation status without provider identifiers. Available even while paid launch
+            is closed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingOperation' }
+        '404':
+          description: Unknown or foreign operation; these cases are indistinguishable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        default:
+          description: Authentication failure or billing temporarily unavailable.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -258,7 +374,9 @@ paths:
   /v1/signup/verify:
     post:
       operationId: verifySignup
-      summary: Verify the emailed code and receive the key (shown once). Rotates — revokes and replaces — any previous key for the email, so re-running signup recovers a lost key.
+      summary:
+        Verify the emailed code and receive the key (shown once). Rotates — revokes and replaces —
+        any previous key for the email, so re-running signup recovers a lost key.
       security: []
       requestBody:
         required: true
@@ -284,7 +402,7 @@ paths:
   /v1/assets:
     get:
       operationId: listAssets
-      summary: List the caller's stored assets (Lite+), oldest first.
+      summary: List the caller's stored assets (hosted pilot), oldest first.
       responses:
         '200':
           description: The account's stored assets.
@@ -298,7 +416,7 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
     post:
       operationId: uploadAsset
-      summary: Upload a durable image asset (Lite+); resized server-side, referenced by `img_` id.
+      summary: Upload a durable image asset (hosted pilot); resized server-side, referenced by `img_` id.
       requestBody:
         required: true
         content:
@@ -333,81 +451,12 @@ paths:
   /v1/assets/{id}:
     delete:
       operationId: deleteAsset
-      summary: Delete one of the caller's assets (Lite+).
+      summary: Delete one of the caller's assets (hosted pilot).
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: string, pattern: '^img_[0-9a-f]{24}$' }
-      responses:
-        '200':
-          description: Deletion outcome (idempotent).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DeleteResponse' }
-        '403':
-          description: Tier below Lite.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-  /v1/profile:
-    get:
-      operationId: getProfile
-      summary: The caller's stored brand profile (Lite+); empty object when unset.
-      responses:
-        '200':
-          description: The stored profile.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ProfileResponse' }
-        '403':
-          description: Tier below Lite.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-    put:
-      operationId: putProfile
-      summary: >-
-        Replace the stored brand profile (Lite+). Applied to every subsequent
-        render under the account; the render body's `profile` field wins per key.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ProfilePutRequest' }
-      responses:
-        '200':
-          description: The stored profile as saved.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ProfileResponse' }
-        '400':
-          description: >-
-            Invalid group/field name, too many groups or fields, or an img_ ref
-            that is not an existing asset of this account (invalid_asset_ref).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '403':
-          description: Tier below Lite.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '413':
-          description: Profile over the serialized size cap (profile_too_large).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '422':
-          description: >-
-            A profile field holds SVG using constructs the renderer cannot
-            reproduce (unrenderable_svg); `findings` names each primitive.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-    delete:
-      operationId: deleteProfile
-      summary: Delete the stored brand profile (Lite+); renders return to the neutral identity.
       responses:
         '200':
           description: Deletion outcome (idempotent).
@@ -452,7 +501,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PushRequest' }
+            schema:
+              $ref: '#/components/schemas/TemplateValidateRequest'
       responses:
         '200':
           description: Validation result (valid=false when any error-severity diagnostic is present).
@@ -473,32 +523,144 @@ paths:
           description: The caller's custom templates.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CustomTemplateList' }
+              schema:
+                $ref: '#/components/schemas/PersonalTemplateList'
         '403':
           description: Tier below Starter.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-  /v1/templates/custom/{slug}:
-    delete:
-      operationId: deleteCustomTemplate
-      summary: Delete one of the caller's custom templates (Starter+).
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema: { type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_-]*$' }
+  /v1/assets/upload-tickets:
+    post:
+      summary: Account-bound browser image upload (pilot only).
       responses:
         '200':
-          description: Deletion outcome (idempotent).
+          description: Upload ticket state.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DeleteResponse' }
-        '403':
-          description: Tier below Starter.
+              schema:
+                $ref: '#/components/schemas/UploadTicketResponse'
+  /v1/assets/upload-tickets/{ticket}:
+    get:
+      summary: Account-bound browser image upload (pilot only).
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{43}$
+      responses:
+        '200':
+          description: Upload ticket state.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema:
+                $ref: '#/components/schemas/UploadTicketStatus'
+  /v1/profiles:
+    get:
+      summary: List account profiles
+      parameters:
+        - in: query
+          name: archived
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryList'
+  /v1/profiles/{id}:
+    get:
+      summary: Read an account profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItem'
+  /v1/profiles/mutations:
+    post:
+      summary: Create, edit, archive or restore profiles. Duplicate by creating a copy with a new ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryMutation'
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryMutationResult'
+  /v1/blocks:
+    get:
+      summary: List account blocks
+      parameters:
+        - in: query
+          name: archived
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryList'
+  /v1/blocks/{id}:
+    get:
+      summary: Read an account block
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItem'
+  /v1/blocks/mutations:
+    post:
+      summary: Create, edit, archive or restore blocks. Duplicate by creating a copy with a new ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryMutation'
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryMutationResult'
+  /v1/library:
+    get:
+      summary: Read the account library for synchronization
+      responses:
+        '200':
+          description: Account library result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibrarySnapshot'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -507,6 +669,89 @@ components:
       bearerFormat: krsv
       description: 'A `krsv_`-prefixed API key sent as `Authorization: Bearer krsv_…`.'
   schemas:
+    BillingChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [selection]
+      properties:
+        selection: { type: string, enum: [lite, starter, business] }
+    BillingChangeConfirmation:
+      type: object
+      additionalProperties: false
+      required: [previewToken]
+      properties:
+        previewToken: { type: string, minLength: 1, maxLength: 200 }
+    BillingMoney:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          pattern: '^-?[0-9]+$'
+          description: Integer minor currency units. Negative immediate amounts represent credits.
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+    BillingChangePreview:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          token,
+          expiresAt,
+          selection,
+          currentSelection,
+          immediate,
+          recurring,
+          renewalAt,
+          quota,
+          usage,
+          blocksFurtherUsage
+        ]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        selection: { type: string }
+        currentSelection: { type: string }
+        immediate: { $ref: '#/components/schemas/BillingMoney' }
+        recurring: { $ref: '#/components/schemas/BillingMoney' }
+        renewalAt: { type: [string, 'null'], format: date-time }
+        quota: { type: [integer, 'null'], minimum: 0 }
+        usage: { type: [integer, 'null'], minimum: 0 }
+        blocksFurtherUsage: { type: boolean }
+    BillingOperation:
+      type: object
+      additionalProperties: false
+      required: [id, kind, status, selection, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [checkout, change, cancellation] }
+        status: { type: string, enum: [processing, succeeded, failed, review] }
+        selection: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    BillingSubscription:
+      type: object
+      additionalProperties: false
+      required: [product, primarySubscription, selections, operations, deleting, changesEnabled]
+      properties:
+        product: { type: string, enum: [api] }
+        primarySubscription:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [selection, status]
+              properties:
+                selection: { type: string }
+                status: { type: string }
+        selections:
+          type: array
+          items: { type: string }
+        operations:
+          type: array
+          items: { $ref: '#/components/schemas/BillingOperation' }
+        deleting: { type: boolean }
+        changesEnabled: { type: boolean }
     Error:
       type: object
       additionalProperties: false
@@ -543,9 +788,7 @@ components:
       additionalProperties: false
       required: [elementPath, primitives, reason]
       description: >-
-        One SVG region the render cannot reproduce — a construct WeasyPrint
-        cannot reproduce, an external dependency the bake cannot fetch, or a
-        filter region too large to rasterize at device resolution. Carried by
+        One SVG region or dependency that cannot be prepared for rendering. Carried by
         `unrenderable_svg` (422) so a caller can locate and remove it.
       properties:
         file:
@@ -573,8 +816,8 @@ components:
         profile_group:
           type: string
           description: >-
-            The profile group this document type reads its brand identity from —
-            the top-level key to use in a stored or per-request profile.
+            The profile group this document type reads its brand identity from — the top-level key
+            to use in a stored or per-request profile.
         profile_fields:
           type: array
           description: The profile fields templates of this type may render.
@@ -590,9 +833,9 @@ components:
       maxLength: 128
       pattern: '^(?:[a-z0-9][a-z0-9_-]*|acct_[0-9a-f]+~[a-z0-9][a-z0-9_-]*|@[a-z0-9][a-z0-9_-]*~[a-z0-9][a-z0-9_-]*)(?:@[1-9][0-9]*)?$'
       description: >-
-        Template id (single URL path segment). Curated templates use a bare slug
-        (e.g. `crisp-invoice-invoice`); `acct_<id>~<slug>`, `@<version>`, and
-        `@<handle>~<slug>` are reserved. This release serves curated slugs only.
+        Template id (single URL path segment). Curated templates use a bare slug (e.g.
+        `crisp-invoice-invoice`); `acct_<id>~<slug>`, `@<version>`, and `@<handle>~<slug>` are
+        reserved. This release serves curated slugs only.
     TemplateCard:
       type: object
       additionalProperties: false
@@ -605,8 +848,8 @@ components:
         free_tier:
           type: boolean
           description: >-
-            Renderable on the free tier. False ⇒ render requires the lite tier or
-            higher (discovery and describe stay open to every tier).
+            Renderable on the free tier. False ⇒ render requires the lite tier or higher (discovery
+            and describe stay open to every tier).
     PageFormat:
       type: object
       additionalProperties: false
@@ -671,8 +914,8 @@ components:
         free_tier:
           type: boolean
           description: >-
-            Renderable on the free tier. False ⇒ render requires the lite tier or
-            higher (discovery and describe stay open to every tier).
+            Renderable on the free tier. False ⇒ render requires the lite tier or higher (discovery
+            and describe stay open to every tier).
         doc_type: { type: string }
         name: { type: string }
         content_fields:
@@ -689,10 +932,9 @@ components:
         content_prompt:
           type: [string, 'null']
           description: >-
-            The template author's content rules — e.g. "invoice totals exclude
-            VAT". Advisory, never enforced: render does not validate content
-            against it. Honour it when generating content for this template.
-            Null when the template declares none.
+            The template author's content rules — e.g. "invoice totals exclude VAT". Advisory, never
+            enforced: render does not validate content against it. Honour it when generating content
+            for this template. Null when the template declares none.
     RenderRequest:
       type: object
       additionalProperties: false
@@ -712,19 +954,20 @@ components:
         profile:
           type: object
           description: >-
-            Per-request brand identity (Lite+), nested by profile group (see
-            `profile_group` on GET /v1/doctypes). Merged over the account's
-            stored profile per key within each group — this field wins. Values
-            replace the template's neutral sample identity; image-type fields
-            take an uploaded asset ref (img_…). With an Idempotency-Key, a
-            replay returns the FIRST render's result even if the stored profile
-            changed in between.
+            Per-document field overrides layered over the selected full account profile. Does not
+            edit the saved profile. Empty fields remain empty. Image values use account-owned img_
+            IDs.
           additionalProperties:
             type: object
             additionalProperties: { type: [string, number] }
         options:
           type: object
           additionalProperties: true
+        profile_id:
+          type: string
+          description:
+            Profile ID. Omit to use the account default. Missing or archived explicit selections
+            are rejected.
     RenderResponse:
       type: object
       additionalProperties: false
@@ -737,17 +980,16 @@ components:
         catalog_version:
           type: string
           description: >-
-            Content hash of the curated corpus snapshot this render used. Pins
-            reproducibility together with renderer_version (a re-render of the same
-            inputs under the same pair is byte-comparable).
+            Content hash of the curated corpus snapshot this render used. Pins reproducibility
+            together with renderer_version (a re-render of the same inputs under the same pair is
+            byte-comparable).
         warnings:
           type: array
           description: >-
-            Non-fatal render warnings. Present only when non-empty (omitted
-            entirely for a clean render). Currently the sole code is
-            `mermaid_render_failed`, emitted when one or more Mermaid diagrams
-            failed to render and shipped as raw source text in the PDF; the
-            render still succeeds (200) and is billed.
+            Non-fatal render warnings. Present only when non-empty (omitted entirely for a clean
+            render). Currently the sole code is `mermaid_render_failed`, emitted when one or more
+            Mermaid diagrams failed to render and shipped as raw source text in the PDF; the render
+            still succeeds (200) and is billed.
           items:
             type: object
             additionalProperties: false
@@ -755,12 +997,62 @@ components:
             properties:
               code: { type: string, enum: [mermaid_render_failed] }
               count: { type: integer }
+        profile_used:
+          type: object
+          required:
+            - id
+            - revision
+            - name
+          properties:
+            id:
+              type:
+                - string
+                - 'null'
+            revision:
+              type: integer
+            name:
+              type: string
+        template_used:
+          type: object
+          required:
+            - id
+            - revision
+          properties:
+            id:
+              type: string
+            revision:
+              type:
+                - string
+                - number
+        profile_images:
+          type: array
+          items:
+            type: object
+            required:
+              - asset_id
+              - displayed
+            properties:
+              asset_id:
+                type: string
+              displayed:
+                type: boolean
+                description: False when the image is intentionally hidden or unsupported by the template.
     SignupRequest:
       type: object
       additionalProperties: false
       required: [email]
       properties:
         email: { type: string }
+        legalAcceptance:
+          type: object
+          additionalProperties: false
+          required: [termsAccepted, adultConfirmed, version, language, product]
+          properties:
+            termsAccepted: { type: boolean }
+            adultConfirmed: { type: boolean }
+            version: { type: string }
+            language: { type: string, enum: [en, de] }
+            product: { type: string, enum: [api] }
     SignupAccepted:
       type: object
       additionalProperties: false
@@ -798,27 +1090,6 @@ components:
       required: [url]
       properties:
         url: { type: string }
-    BrandProfile:
-      type: object
-      description: >-
-        Brand identity nested by profile group → field key → value. Group and
-        key names are 1-64 chars of [a-z0-9_] starting with a letter; image-type
-        fields take an uploaded asset ref (img_…).
-      additionalProperties:
-        type: object
-        additionalProperties: { type: [string, number] }
-    ProfilePutRequest:
-      type: object
-      additionalProperties: false
-      required: [profile]
-      properties:
-        profile: { $ref: '#/components/schemas/BrandProfile' }
-    ProfileResponse:
-      type: object
-      additionalProperties: false
-      required: [profile]
-      properties:
-        profile: { $ref: '#/components/schemas/BrandProfile' }
     AssetListResponse:
       type: object
       additionalProperties: false
@@ -874,22 +1145,32 @@ components:
     TemplateSource:
       type: object
       additionalProperties: false
-      required: [slug, files]
       properties:
-        slug: { type: string }
-        files:
+        id:
+          $ref: '#/components/schemas/TemplateId'
+        revision:
+          type: string
+          minLength: 1
+          maxLength: 128
+        bundle:
           type: object
-          additionalProperties: { type: string }
-          description: Flat filename → text-content map (the pushable bundle).
-    PushRequest:
-      type: object
-      additionalProperties: false
-      required: [slug, files]
-      properties:
-        slug: { type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_-]*$' }
-        files:
-          type: object
-          additionalProperties: { type: string }
+          additionalProperties: false
+          properties:
+            text:
+              type: object
+              additionalProperties: &a1
+                type: string
+            binary:
+              type: object
+              additionalProperties: *a1
+            resetBaseline:
+              $ref: '#/components/schemas/TemplateBundle'
+          required:
+            - text
+            - binary
+      required:
+        - id
+        - bundle
     ValidateResponse:
       type: object
       additionalProperties: false
@@ -899,31 +1180,899 @@ components:
         diagnostics:
           type: array
           items: { $ref: '#/components/schemas/Diagnostic' }
-    PushResponse:
+    TemplateBundle:
+      description:
+        Typed text and binary files. Binary values accept base64 bytes or unchanged one-hour
+        image references returned by MCP templates_source.
       type: object
       additionalProperties: false
-      required: [id, slug, created, updated_at]
       properties:
-        id: { $ref: '#/components/schemas/TemplateId' }
-        slug: { type: string }
-        created:
-          { type: boolean, description: true on first push of the slug; false on replace-in-place. }
-        updated_at: { type: string }
-    CustomTemplateCard:
+        text:
+          type: object
+          additionalProperties: &a1
+            type: string
+        binary:
+          type: object
+          additionalProperties: *a1
+      required:
+        - text
+        - binary
+    PersonalTemplateCard:
       type: object
       additionalProperties: false
-      required: [id, slug, bytes, created_at, updated_at]
       properties:
-        id: { $ref: '#/components/schemas/TemplateId' }
-        slug: { type: string }
-        bytes: { type: integer }
-        created_at: { type: string }
-        updated_at: { type: string }
-    CustomTemplateList:
+        accountId: &a1
+          type: string
+        templateId:
+          $ref: '#/components/schemas/TemplateId'
+        revision:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name: *a1
+        provenance:
+          type: object
+          additionalProperties: true
+        archived:
+          type: boolean
+        updatedAt: *a1
+        modified:
+          type: boolean
+        resetAvailable:
+          type: boolean
+      required:
+        - accountId
+        - templateId
+        - revision
+        - name
+        - provenance
+        - archived
+        - updatedAt
+    PersonalTemplateRequest:
       type: object
       additionalProperties: false
-      required: [templates]
+      properties:
+        kind:
+          enum:
+            - acquire
+            - import
+            - duplicate
+            - edit
+            - rename
+            - archive
+            - restore
+            - reset
+        operationId:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,128}$
+        templateId:
+          $ref: '#/components/schemas/TemplateId'
+        catalogTemplateId:
+          $ref: '#/components/schemas/TemplateId'
+        expectedRevision:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+        bundle:
+          $ref: '#/components/schemas/TemplateBundle'
+      required:
+        - kind
+        - operationId
+      anyOf:
+        - properties:
+            kind:
+              const: acquire
+          required:
+            - catalogTemplateId
+            - name
+        - properties:
+            kind:
+              const: import
+          required:
+            - filename
+            - name
+            - bundle
+        - properties:
+            kind:
+              const: duplicate
+          required:
+            - templateId
+            - expectedRevision
+            - name
+        - properties:
+            kind:
+              const: edit
+          required:
+            - templateId
+            - expectedRevision
+            - name
+            - bundle
+        - properties:
+            kind:
+              const: rename
+          required:
+            - templateId
+            - expectedRevision
+            - name
+        - properties:
+            kind:
+              const: archive
+          required:
+            - templateId
+            - expectedRevision
+        - properties:
+            kind:
+              const: restore
+          required:
+            - templateId
+            - expectedRevision
+        - properties:
+            kind:
+              const: reset
+          required:
+            - templateId
+            - expectedRevision
+    PersonalTemplateResult:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+            - saved
+            - conflict_copy
+            - revision_mismatch
+            - online_required
+            - pro_required
+            - not_found
+            - account_disabled
+            - operation_mismatch
+            - storage_limit
+            - invalid_bundle
+            - reset_unavailable
+        template:
+          $ref: '#/components/schemas/PersonalTemplateCard'
+        documentTemplateId:
+          $ref: '#/components/schemas/TemplateId'
+        original:
+          $ref: '#/components/schemas/PersonalTemplateCard'
+        current:
+          $ref: '#/components/schemas/PersonalTemplateCard'
+        notification:
+          enum:
+            - concurrent_edit
+            - archived_original
+      required:
+        - kind
+    TemplateValidateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        bundle:
+          $ref: '#/components/schemas/TemplateBundle'
+      required:
+        - bundle
+    OwnedTemplatesQuery:
+      type: object
+      additionalProperties: false
+      properties:
+        includeArchived:
+          type: boolean
+        cursor:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required: []
+    PersonalTemplateList:
+      type: object
+      additionalProperties: false
       properties:
         templates:
           type: array
-          items: { $ref: '#/components/schemas/CustomTemplateCard' }
+          items:
+            $ref: '#/components/schemas/PersonalTemplateCard'
+        cursor:
+          type:
+            - string
+            - 'null'
+      required:
+        - templates
+        - cursor
+    TemplateSourceQuery:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/TemplateId'
+      required:
+        - id
+    EmptyRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    AssetIdRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^img_[0-9a-f]{24}$
+      required:
+        - id
+    FileUploadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        file:
+          type: object
+          additionalProperties: false
+          properties:
+            download_url:
+              type: string
+              maxLength: 8192
+            file_id:
+              type: string
+              maxLength: 512
+            mime_type: &a1
+              type: string
+            file_name: *a1
+          required:
+            - download_url
+            - file_id
+      required:
+        - file
+    UploadTicketResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ticket
+        - upload_url
+        - expires_at
+      properties:
+        ticket:
+          type: string
+        upload_url:
+          type: string
+        expires_at:
+          type: string
+    UploadTicketQuery:
+      type: object
+      additionalProperties: false
+      required:
+        - ticket
+      properties:
+        ticket:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+    UploadTicketStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          enum:
+            - pending
+            - uploading
+            - complete
+            - failed
+        asset:
+          $ref: '#/components/schemas/AssetResponse'
+    LibraryProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,100}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        isDefault:
+          default: false
+          type: boolean
+        isSystem:
+          type: boolean
+        seedRegion:
+          default: NEUTRAL
+          type: string
+          enum:
+            - US
+            - UK
+            - EU
+            - JP
+            - SG
+            - IN
+            - ME_GULF
+            - NEUTRAL
+        fields:
+          type: object
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 100
+          additionalProperties:
+            type: object
+            propertyNames:
+              type: string
+              minLength: 1
+              maxLength: 100
+            additionalProperties:
+              anyOf:
+                - type: string
+                  maxLength: 32000
+                - type: number
+        snippets:
+          default:
+            items: []
+          type: object
+          properties:
+            items:
+              default: []
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  content:
+                    type: string
+                  position:
+                    type: string
+                    enum:
+                      - before_title
+                      - before_content
+                      - after_content
+                      - closing
+                  documentTypes:
+                    type: array
+                    items:
+                      type: string
+                required:
+                  - id
+                  - name
+                  - content
+                  - position
+                  - documentTypes
+                additionalProperties: false
+          required:
+            - items
+          additionalProperties: false
+        preferences:
+          default:
+            language: en
+            currency: USD
+            imageMaxResolution: 1920
+            imageJpegQuality: 85
+            imageAutoCompressThreshold: 1
+            imagePdfExportQuality: high
+            labelOverrides: {}
+            fieldLabelOverrides: {}
+          type: object
+          properties:
+            language:
+              default: en
+              type: string
+              pattern: ^[a-z]{2,3}$
+            currency:
+              default: USD
+              type: string
+              minLength: 3
+              maxLength: 3
+            imageMaxResolution:
+              default: 1920
+              type: number
+              minimum: 100
+              maximum: 8000
+            imageJpegQuality:
+              default: 85
+              type: number
+              minimum: 1
+              maximum: 100
+            imageAutoCompressThreshold:
+              default: 1
+              type: number
+              minimum: 0.1
+              maximum: 100
+            imagePdfExportQuality:
+              default: high
+              type: string
+              enum:
+                - low
+                - medium
+                - high
+                - maximum
+            labelOverrides:
+              default: {}
+              type: object
+              propertyNames:
+                type: string
+              additionalProperties:
+                type: object
+                propertyNames:
+                  type: string
+                additionalProperties: {}
+            fieldLabelOverrides:
+              default: {}
+              type: object
+              propertyNames:
+                type: string
+              additionalProperties:
+                type: object
+                propertyNames:
+                  type: string
+                additionalProperties:
+                  type: string
+          required:
+            - language
+            - currency
+            - imageMaxResolution
+            - imageJpegQuality
+            - imageAutoCompressThreshold
+            - imagePdfExportQuality
+            - labelOverrides
+            - fieldLabelOverrides
+          additionalProperties: false
+      required:
+        - id
+        - name
+        - isDefault
+        - isSystem
+        - seedRegion
+        - fields
+        - snippets
+        - preferences
+      additionalProperties: false
+    LibraryBlock:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,100}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          maxLength: 64000
+        fieldKey:
+          type: string
+          maxLength: 200
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - content
+        - fieldKey
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    LibraryMutation:
+      type: object
+      anyOf:
+        - oneOf:
+            - type: object
+              properties:
+                operationId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                kind:
+                  type: string
+                  enum:
+                    - profiles
+                    - blocks
+                action:
+                  type: string
+                  const: create
+                value:
+                  anyOf:
+                    - $ref: '#/components/schemas/LibraryProfile'
+                    - $ref: '#/components/schemas/LibraryBlock'
+              required:
+                - operationId
+                - kind
+                - action
+                - value
+              additionalProperties: false
+            - type: object
+              properties:
+                operationId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                kind:
+                  type: string
+                  enum:
+                    - profiles
+                    - blocks
+                id:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                expectedRevision:
+                  type: integer
+                  exclusiveMinimum: 0
+                  maximum: 9007199254740991
+                action:
+                  type: string
+                  const: edit
+                before:
+                  anyOf:
+                    - $ref: '#/components/schemas/LibraryProfile'
+                    - $ref: '#/components/schemas/LibraryBlock'
+                after:
+                  anyOf:
+                    - $ref: '#/components/schemas/LibraryProfile'
+                    - $ref: '#/components/schemas/LibraryBlock'
+              required:
+                - operationId
+                - kind
+                - id
+                - expectedRevision
+                - action
+                - before
+                - after
+              additionalProperties: false
+            - type: object
+              properties:
+                operationId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                kind:
+                  type: string
+                  enum:
+                    - profiles
+                    - blocks
+                id:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                expectedRevision:
+                  type: integer
+                  exclusiveMinimum: 0
+                  maximum: 9007199254740991
+                action:
+                  type: string
+                  const: archive
+                replacementDefaultId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+              required:
+                - operationId
+                - kind
+                - id
+                - expectedRevision
+                - action
+              additionalProperties: false
+            - type: object
+              properties:
+                operationId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                kind:
+                  type: string
+                  enum:
+                    - profiles
+                    - blocks
+                id:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                expectedRevision:
+                  type: integer
+                  exclusiveMinimum: 0
+                  maximum: 9007199254740991
+                action:
+                  type: string
+                  const: restore
+              required:
+                - operationId
+                - kind
+                - id
+                - expectedRevision
+                - action
+              additionalProperties: false
+            - type: object
+              properties:
+                operationId:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                kind:
+                  type: string
+                  const: profiles
+                action:
+                  type: string
+                  const: set_default
+                id:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{1,100}$
+                expectedDefaultId:
+                  anyOf:
+                    - type: string
+                      pattern: ^[A-Za-z0-9_-]{1,100}$
+                    - type: 'null'
+              required:
+                - operationId
+                - kind
+                - action
+                - id
+                - expectedDefaultId
+              additionalProperties: false
+        - type: object
+          properties:
+            operationId:
+              type: string
+              pattern: ^[A-Za-z0-9_-]{1,100}$
+            kind:
+              type: string
+              enum:
+                - profiles
+                - blocks
+            action:
+              type: string
+              const: batch
+            mutations:
+              minItems: 1
+              maxItems: 50
+              type: array
+              items:
+                oneOf:
+                  - type: object
+                    properties:
+                      operationId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      kind:
+                        type: string
+                        enum:
+                          - profiles
+                          - blocks
+                      action:
+                        type: string
+                        const: create
+                      value:
+                        anyOf:
+                          - $ref: '#/components/schemas/LibraryProfile'
+                          - $ref: '#/components/schemas/LibraryBlock'
+                    required:
+                      - operationId
+                      - kind
+                      - action
+                      - value
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      operationId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      kind:
+                        type: string
+                        enum:
+                          - profiles
+                          - blocks
+                      id:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      expectedRevision:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      action:
+                        type: string
+                        const: edit
+                      before:
+                        anyOf:
+                          - $ref: '#/components/schemas/LibraryProfile'
+                          - $ref: '#/components/schemas/LibraryBlock'
+                      after:
+                        anyOf:
+                          - $ref: '#/components/schemas/LibraryProfile'
+                          - $ref: '#/components/schemas/LibraryBlock'
+                    required:
+                      - operationId
+                      - kind
+                      - id
+                      - expectedRevision
+                      - action
+                      - before
+                      - after
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      operationId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      kind:
+                        type: string
+                        enum:
+                          - profiles
+                          - blocks
+                      id:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      expectedRevision:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      action:
+                        type: string
+                        const: archive
+                      replacementDefaultId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                    required:
+                      - operationId
+                      - kind
+                      - id
+                      - expectedRevision
+                      - action
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      operationId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      kind:
+                        type: string
+                        enum:
+                          - profiles
+                          - blocks
+                      id:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      expectedRevision:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      action:
+                        type: string
+                        const: restore
+                    required:
+                      - operationId
+                      - kind
+                      - id
+                      - expectedRevision
+                      - action
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      operationId:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      kind:
+                        type: string
+                        const: profiles
+                      action:
+                        type: string
+                        const: set_default
+                      id:
+                        type: string
+                        pattern: ^[A-Za-z0-9_-]{1,100}$
+                      expectedDefaultId:
+                        anyOf:
+                          - type: string
+                            pattern: ^[A-Za-z0-9_-]{1,100}$
+                          - type: 'null'
+                    required:
+                      - operationId
+                      - kind
+                      - action
+                      - id
+                      - expectedDefaultId
+                    additionalProperties: false
+          required:
+            - operationId
+            - kind
+            - action
+            - mutations
+          additionalProperties: false
+    LibraryListQuery:
+      type: object
+      additionalProperties: false
+      properties:
+        archived:
+          type: boolean
+    LibraryIdQuery:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,100}$
+    LibraryRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - value
+        - revision
+        - archived
+        - updatedAt
+      properties:
+        value:
+          anyOf:
+            - $ref: '#/components/schemas/LibraryProfile'
+            - $ref: '#/components/schemas/LibraryBlock'
+        revision:
+          type: integer
+        archived:
+          type: boolean
+        updatedAt:
+          type: string
+    LibraryList:
+      type: object
+      required:
+        - revision
+        - defaultProfileId
+        - items
+      properties:
+        revision:
+          type: integer
+        defaultProfileId:
+          type:
+            - string
+            - 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryRecord'
+    LibraryItem:
+      type: object
+      required:
+        - record
+        - defaultProfileId
+      properties:
+        defaultProfileId:
+          type:
+            - string
+            - 'null'
+        record:
+          $ref: '#/components/schemas/LibraryRecord'
+    LibraryMutationResult:
+      type: object
+      required:
+        - revision
+        - defaultProfileId
+        - record
+      properties:
+        revision:
+          type: integer
+        defaultProfileId:
+          type:
+            - string
+            - 'null'
+        record:
+          $ref: '#/components/schemas/LibraryRecord'
+    LibrarySnapshot:
+      type: object
+      required:
+        - revision
+        - defaultProfileId
+        - profiles
+        - blocks
+      properties:
+        revision:
+          type: integer
+        defaultProfileId:
+          type:
+            - string
+            - 'null'
+        profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryRecord'
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryRecord'

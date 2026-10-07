@@ -36,6 +36,7 @@ export async function renderCommand(
   const body: RenderRequest = { template_id: templateId, content }
   if (Object.keys(theme).length > 0) body.theme = theme
   if (parsed.options['--locale']) body.locale = parsed.options['--locale']
+  if (parsed.options['--profile-id']) body.profile_id = parsed.options['--profile-id']
   if (parsed.options['--profile']) body.profile = readProfileFile(parsed.options['--profile'])
 
   const res = await client.render(body)

@@ -78,15 +78,16 @@ export interface RenderContent {
 
 export interface RenderRequest {
   template_id: string
+  profile_id?: string
   content?: RenderContent
   theme?: Record<string, string>
   locale?: string
-  /** Per-request brand identity (Lite+); wins per key over the stored profile. */
+  /** Per-document field overrides; wins per key over the stored profile. */
   profile?: BrandProfile
   options?: Record<string, unknown>
 }
 
-/** Brand identity nested by profile group → field key → value (Lite+).
+/** Brand identity nested by profile group → field key → value.
  *  Image-type fields take an uploaded `img_…` asset ref. */
 export type BrandProfile = Record<string, Record<string, string | number>>
 

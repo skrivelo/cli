@@ -1,9 +1,3 @@
-/**
- * `skrivelo profile get|set|clear` — the stored brand profile (Lite+). `set`
- * reads a JSON file nested by profile group (see `skrivelo doctypes` for each
- * type's profile_group and field keys); the server applies it to every render.
- */
-
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CliError, EXIT } from '../errors.js'
@@ -13,9 +7,9 @@ import type { ParsedArgs } from '../args.js'
 import type { BrandProfile } from '../types.js'
 
 const USAGE = `Usage:
-  skrivelo profile get                 show the stored brand profile
-  skrivelo profile set <profile.json>  replace it (applied to every render)
-  skrivelo profile clear               delete it — renders return to the neutral identity`
+  skrivelo profile get                 show fields of the account default profile
+  skrivelo profile set <profile.json>  replace default-profile fields using its current revision
+  skrivelo profile clear               clear default-profile fields; keep its identity and preferences`
 
 export function readProfileFile(path: string): BrandProfile {
   let text: string
@@ -63,7 +57,8 @@ export async function profileCommand(
   if (sub === 'clear') {
     const res = await client.deleteProfile()
     if (json) printJson(res)
-    else console.log(res.deleted ? 'Stored profile cleared.' : 'No stored profile to clear.')
+    else
+      console.log(res.deleted ? 'Default-profile fields cleared.' : 'No stored profile to clear.')
     return EXIT.OK
   }
 

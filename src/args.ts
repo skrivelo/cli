@@ -23,6 +23,7 @@ const STRING_OPTS = new Set([
   '--locale',
   '--output',
   '--profile',
+  '--profile-id',
   '--timeout',
   '--api-url',
   '--api-key',

@@ -13,7 +13,6 @@ import type {
   ApiErrorBody,
   AssetListResponse,
   DocType,
-  ProfileResponse,
   RenderRequest,
   RenderResponse,
   SignupAccepted,
@@ -123,12 +122,37 @@ describe('CLI types validate against the vendored contract', () => {
     assertValid('RenderRequest', fixture)
   })
 
-  it('ProfileResponse (what profile get/set read)', () => {
-    const fixture: ProfileResponse = {
-      profile: { business: { company_name: 'ACME GmbH', tax_id: 'DE123456789' } }
-    }
-    assertValid('ProfileResponse', fixture)
-    assertValid('ProfilePutRequest', fixture)
+  it('named profile list has a default ID and versioned full values', () => {
+    assertValid('LibraryList', {
+      revision: 1,
+      defaultProfileId: 'business',
+      items: [
+        {
+          revision: 1,
+          archived: false,
+          updatedAt: '2026-10-07',
+          value: {
+            id: 'business',
+            name: 'Business',
+            isDefault: true,
+            isSystem: false,
+            seedRegion: 'NEUTRAL',
+            fields: { business: { company_name: 'ACME GmbH' } },
+            snippets: { items: [] },
+            preferences: {
+              language: 'en',
+              currency: 'USD',
+              imageMaxResolution: 1920,
+              imageJpegQuality: 85,
+              imageAutoCompressThreshold: 1,
+              imagePdfExportQuality: 'high',
+              labelOverrides: {},
+              fieldLabelOverrides: {}
+            }
+          }
+        }
+      ]
+    })
   })
 
   it('AssetListResponse (what assets list reads)', () => {

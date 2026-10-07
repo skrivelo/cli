@@ -61,8 +61,8 @@ skrivelo render quote.md --template <template-id> \
 | `skrivelo templates search [query] --type <doc_type> --locale <l>` | Search the template catalog. |
 | `skrivelo templates describe <id>` | The template's input contract (fields, theme tokens, locales, page format, sample, the author's content rules). |
 | `skrivelo render <file.md> --template <id> [flags]` | Render Markdown + fields to a PDF. |
-| `skrivelo profile get \| set <file.json> \| clear` | Stored brand identity, applied to every render (Lite+). |
-| `skrivelo assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (Lite+). |
+| `skrivelo profile get \| set <file.json> \| clear` | Account default profile fields, reused across surfaces (hosted pilot). |
+| `skrivelo assets list \| upload <image> \| rm <id>` | Durable images (e.g. your logo), referenced as `img_…` ids (hosted pilot). |
 
 Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 
@@ -75,12 +75,13 @@ Global flags: `--json` (machine-readable output), `--version`, `-h`/`--help`.
 | `--theme name=value` | Recolor/restyle a theme token (repeatable). |
 | `--locale <code>` | Document language, from the template's locales. |
 | `-o <path>` | Output path (default: the input file with a `.pdf` extension). |
-| `--profile <file.json>` | Per-render brand identity; wins per key over the stored profile (Lite+). |
+| `--profile-id <id>` | Select a named account profile; otherwise use the account default. |
+| `--profile <file.json>` | Per-render brand identity; wins per key over the stored profile (hosted pilot). |
 | `--timeout <seconds>` | How long to wait for a render (default 180). |
 
-## Brand identity (Lite+)
+## Shared profile (hosted pilot)
 
-Store your identity once and every render carries it; free-tier renders use each template's neutral brand bundle.
+Store your identity once and reuse it across surfaces. Rendering uses the selected account profile; an account without a profile renders with empty identity fields.
 
 ```bash
 skrivelo assets upload logo.png     # → img_… asset id

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 /**
  * Thin HTTP client for the [<]skrivelo Render API. Sends the bearer key, JSON-encodes
  * request bodies, and turns any non-2xx into an `ApiError` carrying the structured
@@ -71,16 +72,81 @@ export class ApiClient {
     return this.request<RenderResponse>('POST', '/render', body)
   }
 
-  getProfile(): Promise<ProfileResponse> {
-    return this.request<ProfileResponse>('GET', '/profile')
+  private async defaultProfile(): Promise<{
+    value: { id: string; fields: BrandProfile; [key: string]: unknown }
+    revision: number
+  } | null> {
+    const result = await this.request<{
+      defaultProfileId: string | null
+      items: {
+        value: { id: string; fields: BrandProfile; [key: string]: unknown }
+        revision: number
+      }[]
+    }>('GET', '/profiles')
+    return result.items.find((item) => item.value.id === result.defaultProfileId) ?? null
   }
 
-  putProfile(profile: BrandProfile): Promise<ProfileResponse> {
-    return this.request<ProfileResponse>('PUT', '/profile', { profile })
+  async getProfile(): Promise<ProfileResponse> {
+    const record = await this.defaultProfile()
+    return { profile: record?.value.fields ?? {} }
   }
 
-  deleteProfile(): Promise<DeleteResponse> {
-    return this.request<DeleteResponse>('DELETE', '/profile')
+  async putProfile(profile: BrandProfile): Promise<ProfileResponse> {
+    const record = await this.defaultProfile()
+    const identity = { operationId: randomUUID(), kind: 'profiles' }
+    const mutation = record
+      ? {
+          ...identity,
+          action: 'edit',
+          id: record.value.id,
+          expectedRevision: record.revision,
+          before: record.value,
+          after: { ...record.value, fields: profile }
+        }
+      : {
+          ...identity,
+          action: 'create',
+          value: {
+            id: randomUUID(),
+            name: 'My profile',
+            isDefault: false,
+            isSystem: false,
+            seedRegion: 'NEUTRAL',
+            fields: profile,
+            snippets: { items: [] },
+            preferences: {
+              language: 'en',
+              currency: 'USD',
+              imageMaxResolution: 1920,
+              imageJpegQuality: 85,
+              imageAutoCompressThreshold: 1,
+              imagePdfExportQuality: 'high',
+              labelOverrides: {},
+              fieldLabelOverrides: {}
+            }
+          }
+        }
+    const result = await this.request<{ record: { value: { fields: BrandProfile } } }>(
+      'POST',
+      '/profiles/mutations',
+      mutation
+    )
+    return { profile: result.record.value.fields }
+  }
+
+  async deleteProfile(): Promise<DeleteResponse> {
+    const record = await this.defaultProfile()
+    if (!record) return { deleted: false }
+    await this.request('POST', '/profiles/mutations', {
+      operationId: randomUUID(),
+      kind: 'profiles',
+      action: 'edit',
+      id: record.value.id,
+      expectedRevision: record.revision,
+      before: record.value,
+      after: { ...record.value, fields: {} }
+    })
+    return { deleted: true }
   }
 
   listAssets(): Promise<AssetListResponse> {

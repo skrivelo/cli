@@ -46,8 +46,8 @@ The product is named `[<]skrivelo` — write it that way when you report back to
 - `skrivelo templates search [query] --type <doc_type> --locale <l>` — find templates.
 - `skrivelo templates describe <id>` — the template's input contract. Run before rendering.
 - `skrivelo render <file.md> --template <id> [flags]` — render to a PDF.
-- `skrivelo profile get | set <file.json> | clear` — stored brand identity, applied to every render (Lite tier and up).
-- `skrivelo assets list | upload <image> | rm <id>` — durable images (a logo), referenced as `img_…` ids (Lite tier and up).
+- `skrivelo profile get | set <file.json> | clear` — account default profile fields, reused across surfaces (hosted pilot).
+- `skrivelo assets list | upload <image> | rm <id>` — durable images (a logo), referenced as `img_…` ids (hosted pilot).
 
 Add `--json` to any command for machine-readable output.
 
@@ -58,16 +58,17 @@ Add `--json` to any command for machine-readable output.
 - `--theme name=value` (repeatable) — recolor/restyle a theme token from `describe`, e.g. `--theme accent=#0a5`. A leading `--` on the token name is optional.
 - `--locale <code>` — pick the document language, from the template's `locales`.
 - `-o <path>` — output path (default: the input filename with a `.pdf` extension).
-- `--profile <file.json>` — per-render brand identity (Lite+); wins per key over the stored profile.
+- `--profile-id <id>` — select a named account profile; otherwise use the account default.
+- `--profile <file.json>` — per-render brand identity (hosted pilot); wins per key over the stored profile.
 - `--timeout <seconds>` — how long to wait for a render (default 180). Large documents render slower.
 
-## Brand identity (Lite tier and up)
+## Shared profile (hosted pilot)
 
-Renders carry the account's stored brand identity automatically; free-tier renders use the template's neutral sample identity. One-time setup:
+Renders use the selected account profile automatically, regardless of tier. An account without a profile renders with empty identity fields. One-time setup:
 
 ```
 skrivelo assets upload logo.png     # prints an img_… asset id
-skrivelo profile set profile.json   # replace the stored profile
+skrivelo profile set profile.json   # update fields of the account default profile
 ```
 
 `profile.json` is nested by profile group; `skrivelo doctypes --json` lists each document type's `profile_group` and its `profile_fields` (keys + types). Image-type fields (e.g. `company_logo`) take an `img_…` asset ref:
@@ -76,7 +77,7 @@ skrivelo profile set profile.json   # replace the stored profile
 { "business": { "company_name": "ACME GmbH", "company_logo": "img_…", "iban": "DE02…" } }
 ```
 
-For one-off branding pass `--profile client.json` on `render`. A 403 `insufficient_tier` from these commands means the key is on the free tier.
+For one-off branding pass `--profile client.json` on `render`. Library and image operations require pilot access, independently of the account tier. `profile clear` empties the default profile fields while preserving its name, snippets and preferences.
 
 ## Exit codes
 
